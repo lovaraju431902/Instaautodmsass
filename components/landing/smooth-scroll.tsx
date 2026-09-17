@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import Lenis from "lenis"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
@@ -9,18 +10,33 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger)
 }
 
-export function SmoothScrollProvider({ children }: { children: React.ReactNode }) {
-  const lenisRef = React.useRef<Lenis | null>(null)
+interface SmoothScrollProviderProps {
+  children: React.ReactNode
+  duration?: number
+  headerOffset?: number
+}
 
+export function SmoothScrollProvider({
+  children,
+  duration = 1.1,
+  headerOffset = -100,
+}: SmoothScrollProviderProps) {
+  const lenisRef = React.useRef<Lenis | null>(null)
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const prevPathRef = React.useRef<string>(pathname)
+  const isInitial = React.useRef(true)
+
+  // Initialize Lenis with GSAP ScrollTrigger integration
   React.useEffect(() => {
-    // Check for prefers-reduced-motion
+    // Accessibility check: Reduced Motion
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (prefersReducedMotion) {
       return
     }
 
     const lenis = new Lenis({
-      duration: 1.1,
+      duration,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       gestureOrientation: "vertical",
@@ -30,7 +46,7 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
 
     lenisRef.current = lenis
 
-    // Synchronize Lenis scroll position with GSAP ScrollTrigger
+    // Synchronize Lenis scroll with GSAP ScrollTrigger
     lenis.on("scroll", ScrollTrigger.update)
 
     const updateTicker = (time: number) => {
@@ -45,7 +61,40 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
       lenis.destroy()
       lenisRef.current = null
     }
-  }, [])
+  }, [duration])
+
+  // Reset scroll position on route change in Next.js App Router
+  React.useEffect(() => {
+    if (!isInitial.current && prevPathRef.current !== pathname) {
+      lenisRef.current?.scrollTo(0, { immediate: true })
+    }
+    prevPathRef.current = pathname
+    isInitial.current = false
+  }, [pathname, searchParams])
+
+  // Intercept anchor navigation matching .lenis-scroll-to or hash links
+  React.useEffect(() => {
+    const lenis = lenisRef.current
+    if (!lenis) return
+
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement)?.closest<HTMLAnchorElement>("a")
+      if (!target) return
+
+      const href = target.getAttribute("href")
+      if (href && href.startsWith("#") && href.length > 1) {
+        const targetElement = document.querySelector(href)
+        if (targetElement) {
+          e.preventDefault()
+          lenis.scrollTo(href, { offset: headerOffset })
+        }
+      }
+    }
+
+    document.addEventListener("click", handleAnchorClick)
+    return () => document.removeEventListener("click", handleAnchorClick)
+  }, [headerOffset, pathname])
 
   return <>{children}</>
 }
+

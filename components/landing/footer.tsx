@@ -75,7 +75,7 @@ function LinkedinIcon({ className = "h-4 w-4" }: { className?: string }) {
 
 export function Footer() {
   return (
-    <footer className="w-full bg-[#050505] text-stone-400 selection:bg-[hsl(340_82%_62%/0.3)] selection:text-white border-t border-stone-900">
+    <footer className="relative z-10 w-full rounded-t-[32px] sm:rounded-t-[48px] lg:rounded-t-[56px] border-t border-stone-800/80 bg-[#050505] text-stone-400 selection:bg-[hsl(340_82%_62%/0.3)] selection:text-white shadow-2xl overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         {/* Main Grid: Left Brand Block + Right Navigation Columns */}
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14">
@@ -331,13 +331,13 @@ export function Footer() {
                   </h4>
                   <ul className="mt-4 space-y-2.5 text-xs">
                     {[
-                      { name: "About", href: "#" },
-                      { name: "What's New", href: "#" },
-                      { name: "Pricing", href: "#pricing" },
-                      { name: "Reviews", href: "#testimonials" },
-                      { name: "Blog", href: "#" },
-                      { name: "Contact", href: "#faq" },
-                      { name: "Careers", href: "#" },
+                      { name: "About", href: "/#features" },
+                      { name: "Pricing", href: "/#pricing" },
+                      { name: "Reviews", href: "/#testimonials" },
+                      { name: "Blog & Guides", href: "/blog" },
+                      { name: "Sign In", href: "/login" },
+                      { name: "Create Account", href: "/signup" },
+                      { name: "Contact & FAQ", href: "/#faq" },
                     ].map((item) => (
                       <li key={item.name}>
                         <a

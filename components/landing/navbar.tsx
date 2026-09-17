@@ -55,46 +55,49 @@ export function Navbar() {
   }
 
   return (
-    <div className="sticky top-3 z-50 mx-auto w-full px-4 sm:px-6 pointer-events-none">
+    <div className="sticky top-4 z-50 mx-auto w-full px-4 sm:px-6 pointer-events-none">
       <header
         className="relative mx-auto w-full max-w-5xl pointer-events-auto transition-all duration-300"
         onMouseLeave={handleMouseLeave}
       >
-        {/* Floating Centered Pill Navbar */}
+        {/* Floating Centered Thick Pill Navbar */}
         <div
-          className={`relative flex items-center justify-between rounded-full border bg-white/95 px-2 py-2 backdrop-blur-md transition-all duration-300 sm:px-6 sm:py-2.5 ${scrolled || activeMenu
-            ? "border-border shadow-lg ring-1 ring-stone-900/5"
-            : "border-border/80 shadow-sm"
-            }`}
+          className={`relative flex items-center justify-between rounded-full border bg-white/95 px-5 py-3 sm:px-7 sm:py-3.5 backdrop-blur-md transition-all duration-300 shadow-md ${
+            scrolled || activeMenu
+              ? "border-stone-300/80 shadow-xl ring-1 ring-stone-900/5"
+              : "border-stone-200/90 shadow-md"
+          }`}
         >
           {/* Left: Brand Logo */}
-          <Link href="/" className="group flex items-center gap-2 outline-none">
-            <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-stone-900 text-white shadow-2xs transition-transform group-hover:scale-105">
-              <Send className="h-3.5 w-3.5 -rotate-12 translate-x-px -translate-y-px text-stone-100" />
-              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[hsl(340_82%_62%)] ring-2 ring-white" />
+          <Link href="/" className="group flex items-center gap-2.5 outline-none">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-stone-900 text-white shadow-sm transition-transform group-hover:scale-105">
+              <Send className="h-4.5 w-4.5 -rotate-12 translate-x-px -translate-y-px text-stone-100" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[hsl(340_82%_62%)] ring-2 ring-white" />
             </div>
-            <div className="flex items-center gap-0.5 font-bold tracking-tight text-foreground">
-              <span className="text-base font-bold">Insta</span>
-              <span className="text-base font-extrabold text-[hsl(340_82%_55%)]">DM</span>
+            <div className="flex items-center gap-0.5 tracking-tight text-foreground">
+              <span className="text-lg font-bold sm:text-xl">Insta</span>
+              <span className="text-lg font-extrabold sm:text-xl text-[hsl(340_82%_55%)]">DM</span>
             </div>
           </Link>
 
           {/* Center: Navigation Links with Hover Triggers */}
-          <nav className="hidden items-center gap-6 md:flex lg:gap-8">
+          <nav className="hidden items-center gap-7 md:flex lg:gap-9">
             {/* Solutions - Mega Menu Trigger */}
             <div
-              className="relative py-1"
+              className="relative py-2"
               onMouseEnter={() => handleMouseEnter("solutions")}
             >
               <button
                 type="button"
-                className={`flex items-center gap-1 text-xs font-medium transition-colors hover:text-foreground outline-none cursor-pointer ${activeMenu === "solutions" ? "text-foreground font-semibold" : "text-stone-600"
-                  }`}
+                className={`flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-foreground outline-none cursor-pointer ${
+                  activeMenu === "solutions" ? "text-foreground font-semibold" : "text-stone-600"
+                }`}
               >
                 <span>Solutions</span>
                 <ChevronDown
-                  className={`h-3 w-3 text-stone-400 transition-transform duration-200 ${activeMenu === "solutions" ? "rotate-180 text-foreground" : ""
-                    }`}
+                  className={`h-3.5 w-3.5 text-stone-400 transition-transform duration-200 ${
+                    activeMenu === "solutions" ? "rotate-180 text-foreground" : ""
+                  }`}
                 />
               </button>
             </div>
@@ -103,7 +106,7 @@ export function Navbar() {
             <Link
               href="/#use-cases"
               onMouseEnter={() => handleMouseEnter("")}
-              className="text-xs font-medium text-stone-600 transition-colors hover:text-foreground"
+              className="text-sm font-medium text-stone-600 transition-colors hover:text-foreground"
             >
               Agencies
             </Link>
@@ -112,25 +115,27 @@ export function Navbar() {
             <Link
               href="/#pricing"
               onMouseEnter={() => handleMouseEnter("")}
-              className="text-xs font-medium text-stone-600 transition-colors hover:text-foreground"
+              className="text-sm font-medium text-stone-600 transition-colors hover:text-foreground"
             >
               Pricing
             </Link>
 
             {/* Resources - Dropdown Trigger */}
             <div
-              className="relative py-1"
+              className="relative py-2"
               onMouseEnter={() => handleMouseEnter("resources")}
             >
               <button
                 type="button"
-                className={`flex items-center gap-1 text-xs font-medium transition-colors hover:text-foreground outline-none cursor-pointer ${activeMenu === "resources" ? "text-foreground font-semibold" : "text-stone-600"
-                  }`}
+                className={`flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-foreground outline-none cursor-pointer ${
+                  activeMenu === "resources" ? "text-foreground font-semibold" : "text-stone-600"
+                }`}
               >
                 <span>Resources</span>
                 <ChevronDown
-                  className={`h-3 w-3 text-stone-400 transition-transform duration-200 ${activeMenu === "resources" ? "rotate-180 text-foreground" : ""
-                    }`}
+                  className={`h-3.5 w-3.5 text-stone-400 transition-transform duration-200 ${
+                    activeMenu === "resources" ? "rotate-180 text-foreground" : ""
+                  }`}
                 />
               </button>
             </div>
@@ -139,7 +144,7 @@ export function Navbar() {
             <Link
               href="/blog"
               onMouseEnter={() => handleMouseEnter("")}
-              className="text-xs font-medium text-stone-600 transition-colors hover:text-foreground flex items-center gap-1"
+              className="text-sm font-medium text-stone-600 transition-colors hover:text-foreground flex items-center gap-1.5"
             >
               <span>Blog</span>
               <span className="h-1.5 w-1.5 rounded-full bg-[hsl(340_82%_62%)]" />
@@ -147,29 +152,20 @@ export function Navbar() {
           </nav>
 
           {/* Right: Actions */}
-          <div className="hidden items-center gap-2 sm:flex">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 rounded-full px-3 text-xs font-medium text-stone-600 hover:text-foreground"
-              onClick={() => {
-                const el = document.getElementById("pricing")
-                el?.scrollIntoView({ behavior: "smooth" })
-              }}
+          <div className="hidden items-center gap-3 sm:flex">
+            <Link
+              href="/login"
+              className="inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-stone-600 hover:text-foreground hover:bg-stone-100 transition-colors"
             >
               Login
-            </Button>
-            <Button
-              size="sm"
-              className="group relative h-8 rounded-full bg-stone-900 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-stone-800 hover:shadow"
-              onClick={() => {
-                const el = document.getElementById("pricing")
-                el?.scrollIntoView({ behavior: "smooth" })
-              }}
+            </Link>
+            <Link
+              href="/signup"
+              className="group relative inline-flex h-10 items-center justify-center rounded-full bg-stone-900 px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-stone-800 hover:shadow-md"
             >
               <span>Get Started</span>
-              <ArrowRight className="ml-1 h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </Button>
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </Link>
           </div>
 
           {/* Mobile Hamburger Button */}
@@ -178,9 +174,9 @@ export function Navbar() {
               type="button"
               aria-label="Toggle navigation menu"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="rounded-full p-1.5 text-stone-600 hover:bg-stone-100 hover:text-foreground"
+              className="rounded-full p-2 text-stone-600 hover:bg-stone-100 hover:text-foreground"
             >
-              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
@@ -190,33 +186,33 @@ export function Navbar() {
         {/* ========================================================================= */}
         {activeMenu === "solutions" && (
           <div
-            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[720px] lg:w-[780px] rounded-3xl border border-stone-200/90 bg-white p-6 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-200"
+            className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[840px] max-w-[95vw] rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-7 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-200 before:absolute before:-top-4 before:left-0 before:right-0 before:h-4"
             onMouseEnter={() => handleMouseEnter("solutions")}
             onMouseLeave={handleMouseLeave}
           >
-            <div className="grid grid-cols-12 gap-6 items-stretch">
-              {/* Left Column: Featured Card (5 cols) */}
-              <div className="col-span-5 flex flex-col justify-between rounded-2xl border border-stone-200/70 bg-stone-50/70 p-5">
+            <div className="grid grid-cols-[330px_1fr_1fr] gap-7 items-stretch">
+              {/* Left Column: Featured Card */}
+              <div className="flex flex-col justify-between rounded-2xl border border-stone-200/70 bg-stone-50/70 p-5">
                 {/* Mockup Preview Video Box */}
-                <div className="rounded-xl border border-stone-200/80 bg-white p-3 shadow-xs">
+                <div className="rounded-xl border border-stone-200/80 bg-white p-3.5 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-900 text-white">
-                        <Play className="h-3 w-3 fill-white translate-x-0.5" />
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-900 text-white">
+                        <Play className="h-3.5 w-3.5 fill-white translate-x-0.5" />
                       </div>
-                      <div className="space-y-1">
-                        <div className="h-2 w-16 rounded-full bg-stone-200" />
-                        <div className="h-1.5 w-10 rounded-full bg-stone-100" />
+                      <div className="space-y-1.5">
+                        <div className="h-2.5 w-20 rounded-full bg-stone-200" />
+                        <div className="h-2 w-12 rounded-full bg-stone-100" />
                       </div>
                     </div>
-                    <span className="rounded bg-[hsl(340_82%_62%/0.15)] text-[hsl(340_82%_55%)] font-bold text-[10px] px-1.5 py-0.5 uppercase tracking-wider">
+                    <span className="rounded bg-[hsl(340_82%_62%/0.15)] text-[hsl(340_82%_55%)] font-bold text-[11px] px-2 py-0.5 uppercase tracking-wider">
                       Link
                     </span>
                   </div>
 
                   {/* Simulated Action Pill Button */}
                   <div className="mt-4 flex justify-end">
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-stone-900 px-3 py-1 text-[11px] font-semibold text-white shadow-xs">
+                    <div className="inline-flex items-center gap-1.5 rounded-full bg-stone-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs">
                       <span>instadm.link</span>
                       <ArrowRight className="h-3 w-3 text-[hsl(340_82%_62%)]" />
                     </div>
@@ -224,28 +220,28 @@ export function Navbar() {
                 </div>
 
                 {/* Text Content */}
-                <div className="mt-4">
+                <div className="mt-5">
                   <h4 className="text-sm font-bold text-stone-900">
                     Comment to DM, automatically
                   </h4>
-                  <p className="mt-1 text-xs text-stone-500 leading-relaxed">
+                  <p className="mt-1.5 text-xs text-stone-500 leading-relaxed">
                     See how a single reel turns into emails and sales, automatically.
                   </p>
 
                   <Link
                     href="/#comments"
                     onClick={() => setActiveMenu(null)}
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-stone-900 hover:text-[hsl(340_82%_55%)] transition-colors"
+                    className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-stone-900 hover:text-[hsl(340_82%_55%)] transition-colors"
                   >
                     <span>Watch it work</span>
-                    <ArrowRight className="h-3 w-3" />
+                    <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               </div>
 
-              {/* Middle Column: BY USE CASE (3.5 cols) */}
-              <div className="col-span-3.5 space-y-3">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+              {/* Middle Column: BY USE CASE */}
+              <div className="flex flex-col min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-3 px-2">
                   BY USE CASE
                 </div>
 
@@ -262,21 +258,21 @@ export function Navbar() {
                         key={item.title}
                         href={item.href}
                         onClick={() => setActiveMenu(null)}
-                        className="group flex items-center gap-3 rounded-xl p-2 text-xs font-semibold text-stone-800 transition-colors hover:bg-stone-100"
+                        className="group flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-stone-700 transition-colors hover:bg-stone-100 hover:text-stone-900 whitespace-nowrap"
                       >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-stone-600 transition-colors group-hover:bg-stone-900 group-hover:text-white">
-                          <Icon className="h-3.5 w-3.5" />
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600 transition-colors group-hover:bg-stone-900 group-hover:text-white">
+                          <Icon className="h-4 w-4" />
                         </div>
-                        <span className="group-hover:text-stone-900">{item.title}</span>
+                        <span className="truncate">{item.title}</span>
                       </Link>
                     )
                   })}
                 </div>
               </div>
 
-              {/* Right Column: BY CREATOR TYPE (3.5 cols) */}
-              <div className="col-span-3.5 space-y-3">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+              {/* Right Column: BY CREATOR TYPE */}
+              <div className="flex flex-col min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-3 px-2">
                   BY CREATOR TYPE
                 </div>
 
@@ -293,12 +289,12 @@ export function Navbar() {
                         key={item.title}
                         href={item.href}
                         onClick={() => setActiveMenu(null)}
-                        className="group flex items-center gap-3 rounded-xl p-2 text-xs font-semibold text-stone-800 transition-colors hover:bg-stone-100"
+                        className="group flex items-center gap-3 rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-stone-700 transition-colors hover:bg-stone-100 hover:text-stone-900 whitespace-nowrap"
                       >
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-stone-600 transition-colors group-hover:bg-stone-900 group-hover:text-white">
-                          <Icon className="h-3.5 w-3.5" />
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600 transition-colors group-hover:bg-stone-900 group-hover:text-white">
+                          <Icon className="h-4 w-4" />
                         </div>
-                        <span className="group-hover:text-stone-900">{item.title}</span>
+                        <span className="truncate">{item.title}</span>
                       </Link>
                     )
                   })}
@@ -313,7 +309,7 @@ export function Navbar() {
         {/* ========================================================================= */}
         {activeMenu === "resources" && (
           <div
-            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[480px] rounded-3xl border border-stone-200/90 bg-white p-5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-200"
+            className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[500px] rounded-3xl border border-stone-200/90 bg-white p-5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-200 before:absolute before:-top-4 before:left-0 before:right-0 before:h-4"
             onMouseEnter={() => handleMouseEnter("resources")}
             onMouseLeave={handleMouseLeave}
           >
@@ -435,26 +431,21 @@ export function Navbar() {
                 FAQ
               </Link>
               <div className="mt-2 flex flex-col gap-2 pt-2 border-t border-border">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-center rounded-full text-xs"
+                <Link
+                  href="/login"
                   onClick={() => setMobileMenuOpen(false)}
+                  className="flex h-9 w-full items-center justify-center rounded-full border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:bg-stone-50"
                 >
                   Login
-                </Button>
-                <Button
-                  size="sm"
-                  className="w-full justify-center rounded-full bg-stone-900 text-xs font-semibold text-white hover:bg-stone-800"
-                  onClick={() => {
-                    setMobileMenuOpen(false)
-                    const el = document.getElementById("pricing")
-                    el?.scrollIntoView({ behavior: "smooth" })
-                  }}
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-stone-900 text-xs font-semibold text-white hover:bg-stone-800"
                 >
                   <span>Get Started</span>
-                  <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
               </div>
             </nav>
           </div>

@@ -1,0 +1,489 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// 1. AUTHENTICATION & USER MANAGEMENT (Better Auth Core)
+// ============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Better Auth Relations
+  sessions      Session[]
+  accounts      Account[]
+
+  // Multi-Tenant Workspace Relations
+  ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
+  workspaceUsers  WorkspaceMember[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String    @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// ============================================================================
+// 2. MULTI-TENANT WORKSPACES & BILLING / SUBSCRIPTION
+// ============================================================================
+
+enum PlanTier {
+  FREE
+  PRO
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  INACTIVE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum MemberRole {
+  OWNER
+  MANAGER
+  EDITOR
+  VIEWER
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String   @default("My Workspace")
+  slug        String   @unique
+  ownerId     String
+  owner       User     @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Subscription & Limits
+  planTier           PlanTier           @default(FREE)
+  subscriptionStatus SubscriptionStatus @default(INACTIVE)
+  stripeCustomerId   String?            @unique
+  stripeSubId        String?            @unique
+  stripePriceId      String?
+  currentPeriodEnd   DateTime?
+
+  // Quotas & Usage Tracking (UI: 0/500 DMs, 1/1 IG accounts)
+  monthlyDmLimit     Int      @default(500)
+  dmsSentThisMonth   Int      @default(0)
+  maxIgAccounts      Int      @default(1)
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Workspace Relations
+  members            WorkspaceMember[]
+  instagramAccounts  InstagramAccount[]
+  automations        Automation[]
+  contacts           Contact[]
+  activityLogs       ActivityLog[]
+
+  @@index([ownerId])
+  @@map("workspace")
+}
+
+model WorkspaceMember {
+  id          String     @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        MemberRole @default(EDITOR)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId])
+  @@map("workspace_member")
+}
+
+// ============================================================================
+// 3. INSTAGRAM INTEGRATION (Meta Graph API)
+// ============================================================================
+
+enum IgAccountStatus {
+  CONNECTED
+  DISCONNECTED
+  EXPIRED
+  RATE_LIMITED
+}
+
+model InstagramAccount {
+  id                String          @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Meta Instagram Graph API Identifiers
+  instagramId       String          @unique // Instagram Business/Creator Account ID
+  username          String          // e.g. "coder_431"
+  name              String?
+  profilePictureUrl String?         @db.Text
+  followersCount    Int             @default(0)
+
+  // Meta OAuth Tokens
+  accessToken       String          @db.Text // Long-lived page/user access token
+  tokenExpiresAt    DateTime?
+  facebookPageId    String?
+
+  status            IgAccountStatus @default(CONNECTED)
+  connectedAt       DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  posts             Post[]
+  automations       Automation[]
+  contacts          Contact[]
+
+  @@index([workspaceId])
+  @@map("instagram_account")
+}
+
+// ============================================================================
+// 4. INSTAGRAM CONTENT (Posts, Reels, Stories)
+// ============================================================================
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  REEL
+  CAROUSEL_ALBUM
+  STORY
+}
+
+model Post {
+  id                 String           @id @default(cuid())
+  instagramAccountId String
+  instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
+
+  // Instagram Graph API Details
+  mediaId            String           @unique // Instagram Media IGID
+  mediaType          MediaType        @default(REEL)
+  caption            String?          @db.Text
+  permalink          String?          @db.Text
+  thumbnailUrl       String?          @db.Text
+  mediaUrl           String?          @db.Text
+
+  // Performance Metrics
+  viewsCount         Int              @default(0)
+  likesCount         Int              @default(0)
+  commentsCount      Int              @default(0)
+  dmClicksCount      Int              @default(0)
+
+  postedAt           DateTime
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  // Automations tied specifically to this post
+  automations        Automation[]
+
+  @@index([instagramAccountId])
+  @@map("post")
+}
+
+// ============================================================================
+// 5. AUTOMATIONS & AI WORKFLOWS (Core Engine)
+// ============================================================================
+
+enum AutomationStatus {
+  LIVE
+  PAUSED
+  DRAFT
+}
+
+enum TriggerType {
+  COMMENTS     // User comments on post/reel
+  STORIES      // User reacts or replies to story
+  KEYWORDS     // User sends direct DM with keyword
+}
+
+enum PostTargetType {
+  SPECIFIC     // A specific post or reel
+  NEXT         // Next post or reel published
+  ANY          // Any post or reel on account
+}
+
+enum KeywordMatchType {
+  SPECIFIC_KEYWORD // Contains one of specific configured keywords
+  ANY_WORD         // Any comment or word triggers automation
+}
+
+model Automation {
+  id                 String           @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  instagramAccountId String
+  instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
+
+  name               String           @default("Comments → DM")
+  status             AutomationStatus @default(LIVE)
+
+  // Step 1: Trigger & Target Selection
+  triggerType        TriggerType      @default(COMMENTS)
+  postTargetType     PostTargetType   @default(SPECIFIC)
+  specificPostId     String?
+  specificPost       Post?            @relation(fields: [specificPostId], references: [id], onDelete: SetNull)
+
+  // Step 2: Keyword Rules & Public Reply
+  keywordMatchType   KeywordMatchType @default(SPECIFIC_KEYWORD)
+  isPublicReplyOn    Boolean          @default(false)
+  publicReplyText    String?          @db.Text // e.g. "Check your DMs! 💬"
+
+  // Step 3: Opening DM (Optional Greeting Flow)
+  openingDmEnabled   Boolean          @default(true)
+  openingMessage     String?          @db.Text // e.g. "Hey! Thanks for your comment! 😊\n\nI'm so glad you're interested!"
+  buttonText         String?          @default("Send me the link")
+
+  // Step 4: Final Message & Link Delivery
+  finalMessage       String           @db.Text // e.g. "Hey! Thanks for asking! 😊 Here's the link: [LINK]"
+  destinationUrl     String?          @db.Text // e.g. "https://instadm.link/access"
+
+  // AI Conversational Intelligence (Optional AI Auto-Reply)
+  useAiAssistant     Boolean          @default(false)
+  aiSystemPrompt     String?          @db.Text
+  aiModel            String?          @default("gemini-1.5-flash")
+
+  // Pro Features & Safety Controls
+  requireFollow      Boolean          @default(false)
+  collectEmail       Boolean          @default(false)
+  randomizeDelay     Boolean          @default(true) // Anti-spam randomized delay
+  delayMinSeconds    Float            @default(0.5)
+  delayMaxSeconds    Float            @default(2.5)
+  filterDuplicates   Boolean          @default(true) // Ignore multiple comments from same user
+
+  // Metrics Cache
+  dmsSentCount       Int              @default(0)
+  clicksCount        Int              @default(0)
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  // Relations
+  keywords           AutomationKeyword[]
+  activityLogs       ActivityLog[]
+  linkClicks         LinkClick[]
+
+  @@index([workspaceId])
+  @@index([instagramAccountId])
+  @@index([specificPostId])
+  @@map("automation")
+}
+
+model AutomationKeyword {
+  id           String     @id @default(cuid())
+  automationId String
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  keyword      String     // e.g. "link", "details", "shop", "price"
+  createdAt    DateTime   @default(now())
+
+  @@unique([automationId, keyword])
+  @@index([automationId])
+  @@map("automation_keyword")
+}
+
+// ============================================================================
+// 6. TEMPLATES (Pre-built CreatorFlow Recipes)
+// ============================================================================
+
+enum TemplateCategory {
+  POPULAR
+  SELL_AND_EARN
+  ENGAGE_AUDIENCE
+  CAPTURE_LEADS
+  BOOK_CLIENTS
+}
+
+model AutomationTemplate {
+  id             String           @id @default(cuid())
+  title          String           // e.g. "Send link on keyword"
+  slug           String           @unique
+  description    String           @db.Text
+  category       TemplateCategory @default(POPULAR)
+  triggerType    TriggerType      @default(COMMENTS)
+
+  // Preview Mockups
+  commentMock    String
+  replyMock      String
+  buttonText     String
+
+  // Pre-filled Config
+  defaultMessage String           @db.Text
+  isFeatured     Boolean          @default(false)
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("automation_template")
+}
+
+// ============================================================================
+// 7. CONTACTS / LEADS (Instagram Audience Management)
+// ============================================================================
+
+enum ContactStatus {
+  NEW
+  WARM
+  ENGAGED
+  CUSTOMER
+  UNSUBSCRIBED
+}
+
+model Contact {
+  id                 String           @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  instagramAccountId String
+  instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
+
+  // Instagram Lead Details
+  instagramUserId    String           // Instagram Scoped User ID (IGSID)
+  username           String?          // e.g. "john_doe"
+  fullName           String?
+  profilePictureUrl  String?          @db.Text
+
+  // Captured Contact Info
+  email              String?
+  phone              String?
+  isFollower         Boolean          @default(false)
+  status             ContactStatus    @default(NEW)
+
+  // Engagement Metrics
+  totalDmsReceived   Int              @default(0)
+  totalLinksClicked  Int              @default(0)
+  lastInteractionAt  DateTime         @default(now())
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  // Relations
+  activityLogs       ActivityLog[]
+  linkClicks         LinkClick[]
+
+  @@unique([instagramAccountId, instagramUserId])
+  @@index([workspaceId])
+  @@index([instagramAccountId])
+  @@map("contact")
+}
+
+// ============================================================================
+// 8. AUDIT LOGS & ENGAGEMENT ANALYTICS (Rewind & Insights)
+// ============================================================================
+
+enum EventType {
+  COMMENT_DETECTED
+  STORY_REACTION_DETECTED
+  OPENING_DM_SENT
+  FINAL_DM_SENT
+  PUBLIC_REPLY_SENT
+  LINK_CLICKED
+  EMAIL_CAPTURED
+  TRIGGER_FAILED
+  RATE_LIMIT_HIT
+}
+
+enum EventStatus {
+  SUCCESS
+  PENDING
+  FAILED
+}
+
+model ActivityLog {
+  id           String      @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  automationId String?
+  automation   Automation? @relation(fields: [automationId], references: [id], onDelete: SetNull)
+
+  contactId    String?
+  contact      Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  eventType    EventType
+  status       EventStatus @default(SUCCESS)
+  messageText  String?     @db.Text
+  metadata     Json?       // Raw webhook payload, error codes, response latency
+  createdAt    DateTime    @default(now())
+
+  @@index([workspaceId])
+  @@index([automationId])
+  @@index([contactId])
+  @@index([createdAt])
+  @@map("activity_log")
+}
+
+model LinkClick {
+  id           String      @id @default(cuid())
+  automationId String
+  automation   Automation  @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  contactId    String?
+  contact      Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  url          String      @db.Text
+  ipAddress    String?
+  userAgent    String?     @db.Text
+  country      String?
+  clickedAt    DateTime    @default(now())
+
+  @@index([automationId])
+  @@index([contactId])
+  @@index([clickedAt])
+  @@map("link_click")
+}
