@@ -76,38 +76,6 @@ export function GsapAnimationWrapper({ children }: { children: React.ReactNode }
           },
           "-=0.4"
         )
-
-      // 2. Scroll Reveal for Below-the-fold sections
-      const sections = [
-        "#features",
-        "#auto-dm",
-        "#comments",
-        "#audience",
-        "#how-it-works",
-        "#integrations",
-        "#use-cases",
-        "#analytics",
-        "#pricing",
-        "#faq",
-      ]
-
-      sections.forEach((selector) => {
-        const el = document.querySelector(selector)
-        if (el) {
-          gsap.from(el, {
-            scrollTrigger: {
-              trigger: el,
-              start: "top 85%",
-              toggleActions: "play none none none",
-              once: true,
-            },
-            opacity: 0,
-            y: 30,
-            duration: 0.8,
-            ease: "power2.out",
-          })
-        }
-      })
     },
     { scope: containerRef }
   )

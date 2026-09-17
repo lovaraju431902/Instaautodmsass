@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { BrowserFrame } from "./browser-frame"
 import { Badge } from "@/components/ui/badge"
+import { NumberAnimation } from "@/components/animation/number-animation"
 
 export function AnalyticsSection() {
   const [timeRange, setTimeRange] = React.useState("Last 30 days")
@@ -124,7 +125,7 @@ export function AnalyticsSection() {
                   <div className="rounded-xl border border-border/70 bg-stone-50/50 p-3">
                     <div className="text-[11px] text-stone-500">Total DMs</div>
                     <div className="mt-1 text-lg font-bold text-stone-900 sm:text-xl">
-                      2,713
+                      <NumberAnimation value={2713} />
                     </div>
                     <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
                       +14.2% vs last month
@@ -133,7 +134,7 @@ export function AnalyticsSection() {
                   <div className="rounded-xl border border-border/70 bg-stone-50/50 p-3">
                     <div className="text-[11px] text-stone-500">Replies</div>
                     <div className="mt-1 text-lg font-bold text-stone-900 sm:text-xl">
-                      917
+                      <NumberAnimation value={917} />
                     </div>
                     <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
                       +21.8% vs last month
@@ -142,7 +143,7 @@ export function AnalyticsSection() {
                   <div className="rounded-xl border border-border/70 bg-stone-50/50 p-3">
                     <div className="text-[11px] text-stone-500">Response Rate</div>
                     <div className="mt-1 text-lg font-bold text-stone-900 sm:text-xl">
-                      33.8%
+                      <NumberAnimation value={33.8} decimals={1} suffix="%" />
                     </div>
                     <div className="text-[10px] text-stone-400 mt-0.5">
                       Avg across active flows

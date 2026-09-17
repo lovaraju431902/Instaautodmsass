@@ -87,6 +87,11 @@
   --ring: 340 82% 62%;
 }
 
+.hero-radial-bg {
+  background-color: #ffffff;
+  background-image: radial-gradient(100% 50% at 50% 0%, rgba(238, 67, 126, 0.22) 0%, rgba(238, 67, 126, 0) 60%, rgba(238, 67, 126, 0) 100%);
+}
+
 @layer base {
   * {
     box-sizing: border-box;

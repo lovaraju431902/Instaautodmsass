@@ -11,12 +11,14 @@ import { IntegrationsSection } from "@/components/landing/integrations-section"
 import { UseCasesSection } from "@/components/landing/use-cases-section"
 import { AnalyticsSection } from "@/components/landing/analytics-section"
 import { TestimonialsSection } from "@/components/landing/testimonials-section"
+import { BlogSection } from "@/components/landing/blog-section"
 import { PricingSection } from "@/components/landing/pricing-section"
 import { FAQSection } from "@/components/landing/faq-section"
 import { FinalCTA } from "@/components/landing/final-cta"
 import { Footer } from "@/components/landing/footer"
 import { SmoothScrollProvider } from "@/components/landing/smooth-scroll"
 import { GsapAnimationWrapper } from "@/components/landing/gsap-animations"
+import { RevealAnimation } from "@/components/animation/reveal-animation"
 
 export default function Home() {
   return (
@@ -25,7 +27,7 @@ export default function Home() {
         {/* 1. Announcement Bar */}
         <AnnouncementBar />
 
-        {/* 2. Sticky Navbar */}
+        {/* 2. Floating Centered Pill Navbar (Shows on scroll, stays centered) */}
         <Navbar />
 
         {/* Main Content with GSAP Scroll & Entrance Animations */}
@@ -34,44 +36,75 @@ export default function Home() {
             {/* 3. Hero Section & Product Dashboard */}
             <HeroSection />
 
-            {/* 4. Trust / Credibility Strip */}
-            <TrustStrip />
+            {/* 4. Trust / Credibility Strip - Down to Up */}
+            <RevealAnimation direction="up" duration={0.8} offset={45}>
+              <TrustStrip />
+            </RevealAnimation>
 
-            {/* 5. Feature Introduction */}
-            <FeatureIntro />
+            {/* 5. Feature Introduction - Up to Down */}
+            <RevealAnimation direction="down" duration={0.9} offset={50}>
+              <FeatureIntro />
+            </RevealAnimation>
 
-            {/* 6. Feature Showcase — Auto DM */}
-            <AutoDMShowcase />
+            {/* 6. Feature Showcase — Auto DM - Down to Up */}
+            <RevealAnimation direction="up" duration={1.0} offset={55}>
+              <AutoDMShowcase />
+            </RevealAnimation>
 
-            {/* 7. Feature Showcase — Comment Automation */}
-            <CommentReplyShowcase />
+            {/* 7. Feature Showcase — Comment Automation - Up to Down */}
+            <RevealAnimation direction="down" duration={0.9} offset={55}>
+              <CommentReplyShowcase />
+            </RevealAnimation>
 
-            {/* 8. Feature Showcase — Audience & Leads */}
-            <AudienceShowcase />
+            {/* 8. Feature Showcase — Audience & Leads - Down to Up */}
+            <RevealAnimation direction="up" duration={1.0} offset={55}>
+              <AudienceShowcase />
+            </RevealAnimation>
 
-            {/* 9. How It Works */}
-            <HowItWorks />
+            {/* 9. How It Works - Up to Down */}
+            <RevealAnimation direction="down" duration={0.9} offset={50}>
+              <HowItWorks />
+            </RevealAnimation>
 
-            {/* 10. Integrations Section */}
-            <IntegrationsSection />
+            {/* 10. Integrations Section - Down to Up */}
+            <RevealAnimation direction="up" duration={0.8} offset={45}>
+              <IntegrationsSection />
+            </RevealAnimation>
 
-            {/* 11. Use Cases Section */}
-            <UseCasesSection />
+            {/* 11. Use Cases Section - Up to Down */}
+            <RevealAnimation direction="down" duration={0.9} offset={50}>
+              <UseCasesSection />
+            </RevealAnimation>
 
-            {/* 12. Analytics / Performance Section */}
-            <AnalyticsSection />
+            {/* 12. Analytics / Performance Section - Down to Up */}
+            <RevealAnimation direction="up" duration={1.0} offset={55}>
+              <AnalyticsSection />
+            </RevealAnimation>
 
-            {/* 13. Testimonials Section */}
-            <TestimonialsSection />
+            {/* 13. Testimonials Section - Up to Down */}
+            <RevealAnimation direction="down" duration={0.8} offset={45}>
+              <TestimonialsSection />
+            </RevealAnimation>
 
-            {/* 14. Pricing Section */}
-            <PricingSection />
+            {/* 14. Blog & Playbooks Section - Down to Up */}
+            <RevealAnimation direction="up" duration={0.9} offset={50}>
+              <BlogSection />
+            </RevealAnimation>
 
-            {/* 15. FAQ Section */}
-            <FAQSection />
+            {/* 15. Pricing Section - Up to Down */}
+            <RevealAnimation direction="down" duration={1.0} offset={55}>
+              <PricingSection />
+            </RevealAnimation>
 
-            {/* 16. Final CTA Section */}
-            <FinalCTA />
+            {/* 15. FAQ Section - Up to Down */}
+            <RevealAnimation direction="down" duration={0.9} offset={50}>
+              <FAQSection />
+            </RevealAnimation>
+
+            {/* 16. Final CTA Section - Down to Up */}
+            <RevealAnimation direction="up" duration={1.0} offset={55}>
+              <FinalCTA />
+            </RevealAnimation>
           </main>
         </GsapAnimationWrapper>
 

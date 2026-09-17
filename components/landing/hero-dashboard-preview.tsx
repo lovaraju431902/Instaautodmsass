@@ -23,6 +23,7 @@ import {
 import { BrowserFrame } from "./browser-frame"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { NumberAnimation } from "@/components/animation/number-animation"
 
 export function HeroDashboardPreview() {
   const [activeTab, setActiveTab] = React.useState("Dashboard")
@@ -205,10 +206,10 @@ export function HeroDashboardPreview() {
               {/* 4 Metric Cards */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  { label: "DMs sent", value: "1,248", change: "+18%", tag: "7 days" },
-                  { label: "New conversations", value: "892", change: "+24%", tag: "7 days" },
-                  { label: "Replies received", value: "312", change: "+12%", tag: "7 days" },
-                  { label: "Response rate", value: "8.4%", change: "+2.1%", tag: "Avg" },
+                  { label: "DMs sent", num: 1248, change: "+18%", tag: "7 days" },
+                  { label: "New conversations", num: 892, change: "+24%", tag: "7 days" },
+                  { label: "Replies received", num: 312, change: "+12%", tag: "7 days" },
+                  { label: "Response rate", num: 8.4, decimals: 1, suffix: "%", change: "+2.1%", tag: "Avg" },
                 ].map((stat) => (
                   <div
                     key={stat.label}
@@ -219,7 +220,11 @@ export function HeroDashboardPreview() {
                       <span className="font-semibold text-emerald-600">{stat.change}</span>
                     </div>
                     <div className="mt-1 text-lg font-bold tracking-tight text-stone-900 sm:text-xl">
-                      {stat.value}
+                      <NumberAnimation
+                        value={stat.num}
+                        decimals={stat.decimals || 0}
+                        suffix={stat.suffix || ""}
+                      />
                     </div>
                     <div className="mt-1 text-[10px] text-stone-400">Sample product data</div>
                   </div>

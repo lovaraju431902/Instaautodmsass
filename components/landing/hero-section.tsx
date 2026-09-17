@@ -8,17 +8,18 @@ import { FloatingProductCards } from "./floating-product-cards"
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden isolate pt-8 pb-16 md:pt-16 md:pb-24">
+    <section className="relative overflow-hidden pt-8 pb-16 md:pt-16 md:pb-24">
       {/* Hero Radial Gradient Background matching brand primary/accent color */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-screen w-full select-none"
+        className="hero-radial-bg pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 z-0 h-screen w-screen select-none"
         style={{
-          background:
-            "radial-gradient(100% 50% at 50% 0%, rgba(238, 67, 126, 0.18) 0%, rgba(238, 67, 126, 0) 50%, rgba(238, 67, 126, 0) 100%)",
+          backgroundColor: "#ffffff",
+          backgroundImage:
+            "radial-gradient(100% 50% at 50% 0%, rgba(238, 67, 126, 0.22) 0%, rgba(238, 67, 126, 0) 60%, rgba(238, 67, 126, 0) 100%)",
         }}
       />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Two-column hero container */}
         <div className="flex flex-col items-center gap-12 lg:gap-16">
           {/* Hero Copy (Centered for dramatic SaaS presence or editorial left) */}
