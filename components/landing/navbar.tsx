@@ -113,7 +113,7 @@ export function Navbar() {
 
             {/* Pricing */}
             <Link
-              href="/#pricing"
+              href="/pricing"
               onMouseEnter={() => handleMouseEnter("")}
               className="text-sm font-medium text-stone-600 transition-colors hover:text-foreground"
             >

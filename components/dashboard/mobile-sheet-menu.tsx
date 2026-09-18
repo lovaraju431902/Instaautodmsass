@@ -107,15 +107,25 @@ export function MobileSheetMenu({ open, onOpenChange, onOpenNewAutomation }: Mob
             </div>
           </div>
 
-          <Button
-            variant="outline"
-            disabled={loggingOut}
-            onClick={handleSignOut}
-            className="w-full justify-center gap-2 rounded-xl border-stone-200 text-xs font-semibold text-stone-700 hover:bg-stone-100 hover:text-stone-900 shadow-2xs cursor-pointer"
-          >
-            <LogOut className="h-3.5 w-3.5 text-stone-500" />
-            <span>{loggingOut ? "Signing out..." : "Sign out"}</span>
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/dashboard/profile"
+              onClick={() => onOpenChange(false)}
+              className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-white text-xs font-semibold text-stone-700 hover:bg-stone-50 shadow-2xs transition"
+            >
+              <span>Profile & Plan</span>
+            </Link>
+
+            <Button
+              variant="outline"
+              disabled={loggingOut}
+              onClick={handleSignOut}
+              className="h-9 justify-center gap-1.5 rounded-xl border-stone-200 text-xs font-semibold text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700 shadow-2xs cursor-pointer transition"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>{loggingOut ? "Signing out..." : "Sign out"}</span>
+            </Button>
+          </div>
         </div>
       </div>
     </Sheet>

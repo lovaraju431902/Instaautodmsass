@@ -46,7 +46,7 @@ export default function LoginPage() {
       const res = await authClient.signIn.email({
         email: validation.data.email,
         password: validation.data.password,
-        dontRememberMe: !validation.data.rememberMe,
+        rememberMe: validation.data.rememberMe,
       })
 
       if (res.error) {

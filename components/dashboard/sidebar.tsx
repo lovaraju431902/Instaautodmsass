@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   ChevronDown,
   ChevronLeft,
@@ -29,6 +29,23 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [signingOut, setSigningOut] = React.useState(false)
+  const { data: session } = authClient.useSession()
+
+  const userName = session?.user?.name || "Creator"
+  const userInitial = userName.charAt(0).toUpperCase() || "C"
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    try {
+      await authClient.signOut()
+    } catch {
+      // ignore
+    } finally {
+      router.push("/login")
+    }
+  }
 
   return (
     <aside
@@ -177,6 +194,36 @@ export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps
               <Zap className="h-3 w-3 fill-white text-white" />
               <span>Upgrade</span>
             </Link>
+
+            {/* Desktop User Profile & Log Out Row */}
+            <div className="pt-2.5 mt-1 border-t border-stone-100 flex items-center justify-between gap-2">
+              <Link
+                href="/dashboard/profile"
+                className="flex items-center gap-2 overflow-hidden flex-1 group hover:opacity-85 transition"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-stone-900 text-white text-[10px] font-bold">
+                  {userInitial}
+                </div>
+                <div className="overflow-hidden leading-tight text-left">
+                  <p className="text-xs font-bold text-stone-900 truncate group-hover:text-[hsl(340_82%_55%)]">
+                    {userName}
+                  </p>
+                  <p className="text-[10px] text-stone-400">Profile & Settings</p>
+                </div>
+              </Link>
+
+              <Tooltip content="Log out of CreatorFlow" side="top">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                  aria-label="Log out"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </Tooltip>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
@@ -193,6 +240,29 @@ export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps
                 <Zap className="h-3.5 w-3.5 fill-white text-white" />
               </Link>
             </Tooltip>
+
+            {/* Collapsed Profile Link & Log Out */}
+            <div className="pt-2 border-t border-stone-100 flex flex-col items-center gap-1.5 w-full">
+              <Tooltip content="Profile & Settings" side="right">
+                <Link
+                  href="/dashboard/profile"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-900 text-white text-[10px] font-bold"
+                >
+                  {userInitial}
+                </Link>
+              </Tooltip>
+              <Tooltip content="Log out" side="right">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl text-stone-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                  aria-label="Log out"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </Tooltip>
+            </div>
           </div>
         )}
       </div>

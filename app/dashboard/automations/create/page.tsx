@@ -81,9 +81,44 @@ export default function CreateAutomationPage() {
     setKeywords(keywords.filter((k) => k !== kw))
   }
 
-  const handleStartAutomation = () => {
-    alert("🎉 Automation is now LIVE! Your Instagram trigger is running 24/7.")
-    router.push("/dashboard/automations")
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+
+  const handleStartAutomation = async () => {
+    setIsSubmitting(true)
+    try {
+      const res = await fetch("/api/automations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name:
+            postSelection === "specific"
+              ? "Reel Comments → Auto DM"
+              : "Any Post Comments → Auto DM",
+          triggerType: triggerType === "stories" ? "STORIES" : "COMMENTS",
+          postTargetType: postSelection,
+          keywords: keywordType === "any" ? [] : keywords,
+          openingDmEnabled,
+          openingMessage,
+          buttonText,
+          finalMessage,
+          destinationUrl: linkUrl,
+          useAiAssistant: true,
+          aiSystemPrompt: "You are a helpful Instagram creator assistant. Always be enthusiastic and provide the requested link.",
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to create automation")
+      }
+
+      router.push("/dashboard/automations")
+    } catch (err: any) {
+      console.error("Failed to create automation:", err)
+      alert(err.message || "Failed to create automation")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const templates = [
@@ -130,10 +165,17 @@ export default function CreateAutomationPage() {
 
           <Button
             onClick={handleStartAutomation}
-            className="h-9 rounded-full bg-[hsl(340_82%_62%)] px-5 text-xs font-bold text-white shadow-xs hover:bg-[hsl(340_82%_55%)] active:scale-95 transition cursor-pointer"
+            disabled={isSubmitting}
+            className="h-9 rounded-full bg-[hsl(340_82%_62%)] px-5 text-xs font-bold text-white shadow-xs hover:bg-[hsl(340_82%_55%)] active:scale-95 transition cursor-pointer disabled:opacity-50"
           >
-            <Play className="mr-1.5 h-3.5 w-3.5 fill-white text-white" />
-            <span>Start Automation</span>
+            {isSubmitting ? (
+              <span>Activating Trigger...</span>
+            ) : (
+              <>
+                <Play className="mr-1.5 h-3.5 w-3.5 fill-white text-white" />
+                <span>Start Automation</span>
+              </>
+            )}
           </Button>
         </div>
       </div>

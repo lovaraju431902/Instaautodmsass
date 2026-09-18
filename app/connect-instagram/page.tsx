@@ -307,6 +307,47 @@ export default function ConnectInstagramPage() {
                 </p>
               </div>
 
+              {/* Direct Meta Official OAuth Button */}
+              <div className="max-w-md mx-auto space-y-3">
+                <a
+                  href={
+                    process.env.NEXT_PUBLIC_INSTAGRAM_OAUTH_URL ||
+                    "https://api.instagram.com/oauth/authorize?client_id=123456789012345&redirect_uri=http://localhost:3000/callback/instagram&scope=instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments&response_type=code"
+                  }
+                  className="flex h-13 w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-sm font-bold text-white shadow-md hover:opacity-95 transition active:scale-98 cursor-pointer"
+                >
+                  <InstagramIcon className="h-5 w-5 shrink-0" />
+                  <span>Connect with Meta (Official OAuth)</span>
+                </a>
+
+                <div className="rounded-2xl border border-stone-200/80 bg-stone-50/70 p-3 text-left space-y-1.5 text-[11px] text-stone-600">
+                  <div className="flex items-center gap-1.5 font-bold text-stone-800">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span>Requested Meta Business Permissions:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    <span className="rounded-md bg-white px-2 py-0.5 border border-stone-200 font-mono text-[10px] text-stone-700">
+                      instagram_business_basic
+                    </span>
+                    <span className="rounded-md bg-white px-2 py-0.5 border border-stone-200 font-mono text-[10px] text-stone-700">
+                      instagram_business_manage_messages
+                    </span>
+                    <span className="rounded-md bg-white px-2 py-0.5 border border-stone-200 font-mono text-[10px] text-stone-700">
+                      instagram_business_manage_comments
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative py-2 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-stone-200" />
+                  </div>
+                  <span className="relative bg-white px-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+                    Or find account manually
+                  </span>
+                </div>
+              </div>
+
               {/* Form Input Container */}
               <form onSubmit={handleFindAccount} className="max-w-md mx-auto space-y-4 text-left">
                 <div className="space-y-1.5">

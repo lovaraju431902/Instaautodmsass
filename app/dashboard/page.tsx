@@ -4,18 +4,15 @@ import * as React from "react"
 import Link from "next/link"
 import {
   ArrowRight,
-  BarChart3,
   Bookmark,
-  ChevronRight,
   Heart,
-  HelpCircle,
   Info,
   MessageCircle,
   MoreHorizontal,
-  MoreVertical,
   MousePointerClick,
   Pause,
   Play,
+  Plus,
   RefreshCw,
   Send,
   User,
@@ -23,32 +20,130 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+interface DashboardStats {
+  account: {
+    id: string
+    username: string
+    name?: string
+    followersCount: number
+    profilePictureUrl?: string
+  } | null
+  stats: {
+    dmsSent: number
+    linkClicks: number
+    leadsCollected: number
+    totalFollowers: number
+    dmsSentThisMonth?: number
+    monthlyDmLimit?: number
+  }
+  automations: Array<{
+    id: string
+    name: string
+    status: "LIVE" | "PAUSED"
+    triggerType: string
+    dmsSentCount: number
+    clicksCount: number
+    keywords: string[]
+    finalMessage: string
+    destinationUrl?: string
+  }>
+  recentPost: {
+    caption?: string
+    mediaType?: string
+    likesCount?: number
+    commentsCount?: number
+  } | null
+}
+
 export default function DashboardHomePage() {
-  const [isLive, setIsLive] = React.useState(true)
+  const [data, setData] = React.useState<DashboardStats | null>(null)
+  const [loading, setLoading] = React.useState(true)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
-  const [igUsername, setIgUsername] = React.useState("coder_431")
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/dashboard/stats")
+      if (res.ok) {
+        const json = await res.json()
+        setData(json)
+      }
+    } catch (err) {
+      console.error("Failed to load dashboard stats:", err)
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
+  }
 
   React.useEffect(() => {
-    if (typeof document !== "undefined") {
-      const match = document.cookie.match(/instadm_ig_username=([^;]+)/)
-      if (match && match[1]) {
-        setIgUsername(match[1])
-      }
-    }
+    fetchStats()
   }, [])
 
   const handleRefresh = () => {
     setIsRefreshing(true)
-    setTimeout(() => setIsRefreshing(false), 600)
+    fetchStats()
   }
+
+  const handleToggleAutomation = async (id: string, currentStatus: "LIVE" | "PAUSED") => {
+    const nextStatus = currentStatus === "LIVE" ? "PAUSED" : "LIVE"
+    try {
+      const res = await fetch("/api/automations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: nextStatus }),
+      })
+      if (res.ok) {
+        setData((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            automations: prev.automations.map((a) =>
+              a.id === id ? { ...a, status: nextStatus } : a
+            ),
+          }
+        })
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const username = data?.account?.username || "creator"
+  const displayName = data?.account?.name || `@${username}`
+  const automations = data?.automations || []
 
   return (
     <div className="space-y-8 pb-12 select-none">
       {/* 1. Welcome Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
-          Welcome @{igUsername}!
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+            Welcome @{username}!
+          </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Real-time performance and active Instagram triggers.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-8 rounded-xl text-xs font-semibold gap-1.5 border-stone-200"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span>Refresh Data</span>
+          </Button>
+
+          <Link
+            href="/pricing"
+            className="inline-flex items-center justify-center h-8 rounded-xl bg-gradient-to-r from-rose-500 to-indigo-600 px-3 text-xs font-bold text-white shadow-xs hover:opacity-95 transition"
+          >
+            Upgrade Plan
+          </Link>
+        </div>
       </div>
 
       {/* 2. Today's Actions Section */}
@@ -56,44 +151,35 @@ export default function DashboardHomePage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-stone-900">Today&apos;s actions</h2>
-            <p className="text-xs text-stone-500">All your recent posts have an automation.</p>
+            <p className="text-xs text-stone-500">Connected account preview and live post monitor.</p>
           </div>
           <div className="flex items-center gap-3 text-xs">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              className="flex items-center gap-1.5 text-stone-600 hover:text-stone-900 cursor-pointer"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-              <span>Refresh</span>
-            </button>
             <Link
-              href="/dashboard/content"
+              href="/dashboard/automations/create"
               className="flex items-center gap-1 font-semibold text-stone-900 hover:underline"
             >
-              <span>View all</span>
+              <span>Create trigger</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
 
-        {/* Instagram Reel Smartphone Preview Card (Matching Screenshot 1) */}
+        {/* Instagram Reel Smartphone Preview Card */}
         <div className="w-full max-w-[280px]">
           <div className="overflow-hidden rounded-3xl border border-stone-800 bg-black p-3.5 text-white shadow-lg">
             {/* Reel Header */}
             <div className="flex items-center justify-between pb-2.5">
               <div className="flex items-center gap-2">
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-stone-700 text-[10px] font-bold">
-                  C
+                  {username.slice(0, 1).toUpperCase()}
                 </div>
-                <span className="text-xs font-semibold">coder_431</span>
+                <span className="text-xs font-semibold">{username}</span>
               </div>
               <MoreHorizontal className="h-4 w-4 text-stone-400" />
             </div>
 
             {/* Video Preview Canvas */}
             <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-gradient-to-b from-sky-700 via-blue-900 to-emerald-950 flex items-center justify-center">
-              {/* Center Play Icon */}
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-xs text-white">
                 <Play className="h-4 w-4 fill-white translate-x-0.5" />
               </div>
@@ -111,10 +197,10 @@ export default function DashboardHomePage() {
 
             {/* Caption & Timestamp */}
             <div className="pt-2">
-              <p className="text-xs font-semibold text-white">
-                coder_431 <span className="font-normal text-stone-300">| Hmm</span>
+              <p className="text-xs font-semibold text-white truncate">
+                {username} <span className="font-normal text-stone-300">| {data?.recentPost?.caption || "Automation active"}</span>
               </p>
-              <p className="text-[10px] font-medium text-stone-500 uppercase mt-1">YESTERDAY</p>
+              <p className="text-[10px] font-medium text-stone-500 uppercase mt-1">META API LIVE</p>
             </div>
 
             {/* View Automation Action Button */}
@@ -123,18 +209,18 @@ export default function DashboardHomePage() {
                 href="/dashboard/automations"
                 className="flex h-9 w-full items-center justify-center rounded-full bg-white text-xs font-bold text-black hover:bg-stone-100 transition"
               >
-                View Automation
+                View Automations
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. Performance Snapshot Section (Matching Screenshot 1) */}
+      {/* 3. Performance Snapshot Section (Real Data) */}
       <section className="space-y-3">
         <div>
           <h2 className="text-sm font-bold text-stone-900">Performance Snapshot</h2>
-          <p className="text-xs text-stone-500">Last 7 days</p>
+          <p className="text-xs text-stone-500">Live statistics across all Instagram triggers</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -149,15 +235,16 @@ export default function DashboardHomePage() {
               </div>
             </div>
             <div className="mt-2">
-              <span className="text-2xl font-bold text-stone-900">0</span>
+              <span className="text-2xl font-bold text-stone-900">
+                {data?.stats?.dmsSent ?? 0}
+              </span>
             </div>
             <div className="mt-2 flex items-center justify-between text-[11px]">
               <span className="text-stone-400 flex items-center gap-1">
-                <span>Queued: 0</span>
-                <Info className="h-3 w-3 text-stone-300" />
+                <span>Monthly: {data?.stats?.dmsSentThisMonth ?? 0}/{data?.stats?.monthlyDmLimit ?? 500}</span>
               </span>
-              <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600">
-                0% vs last 7 days
+              <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                Active
               </span>
             </div>
           </div>
@@ -173,11 +260,13 @@ export default function DashboardHomePage() {
               </div>
             </div>
             <div className="mt-2">
-              <span className="text-2xl font-bold text-stone-900">0</span>
+              <span className="text-2xl font-bold text-stone-900">
+                {data?.stats?.linkClicks ?? 0}
+              </span>
             </div>
             <div className="mt-2 text-[11px]">
-              <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600">
-                0% vs last 7 days
+              <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-stone-600">
+                Real-time tracking
               </span>
             </div>
           </div>
@@ -193,12 +282,14 @@ export default function DashboardHomePage() {
               </div>
             </div>
             <div className="mt-2">
-              <span className="text-2xl font-bold text-stone-900">0</span>
+              <span className="text-2xl font-bold text-stone-900">
+                {data?.stats?.leadsCollected ?? 0}
+              </span>
             </div>
             <div className="mt-2 text-[11px]">
-              <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600">
-                0% vs last 7 days
-              </span>
+              <Link href="/dashboard/contacts" className="text-rose-600 font-semibold hover:underline">
+                View Contacts &rarr;
+              </Link>
             </div>
           </div>
 
@@ -207,30 +298,33 @@ export default function DashboardHomePage() {
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-tight text-stone-500 flex items-center gap-1">
                 <span>TOTAL FOLLOWERS</span>
-                <Info className="h-3 w-3 text-stone-300" />
               </span>
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100 text-stone-600">
                 <Users className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <span className="text-2xl font-bold text-stone-900">25</span>
+              <span className="text-2xl font-bold text-stone-900">
+                {data?.stats?.totalFollowers ?? 0}
+              </span>
             </div>
             <div className="mt-2 text-[11px]">
               <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-stone-600">
-                0% vs last 7 days
+                Synced from Meta API
               </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. Active Automations (1) Section (Matching Screenshot 1) */}
+      {/* 4. Active Automations Section */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-stone-900">Active Automations (1)</h2>
-            <p className="text-xs text-stone-500">Running 24/7 to collect contacts</p>
+            <h2 className="text-sm font-bold text-stone-900">
+              Active Automations ({automations.length})
+            </h2>
+            <p className="text-xs text-stone-500">Running 24/7 to capture leads and send DMs</p>
           </div>
           <Link
             href="/dashboard/automations"
@@ -242,117 +336,110 @@ export default function DashboardHomePage() {
         </div>
 
         <div className="rounded-2xl border border-stone-200/80 bg-white shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-stone-100 bg-stone-50/50 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                <tr>
-                  <th className="py-3 px-5">NAME</th>
-                  <th className="py-3 px-4 text-center">DMS</th>
-                  <th className="py-3 px-4 text-center">CLICKS</th>
-                  <th className="py-3 px-4 text-center">CTR</th>
-                  <th className="py-3 px-4">STATUS</th>
-                  <th className="py-3 px-5 text-right">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                <tr className="hover:bg-stone-50/40 transition">
-                  <td className="py-4 px-5">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-gradient-to-tr from-sky-800 to-indigo-950 flex items-center justify-center text-white">
-                        <Play className="h-3.5 w-3.5 fill-white" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="font-bold text-stone-900">Comments → DM</p>
-                        <p className="text-[11px] text-stone-500 max-w-md line-clamp-1">
-                          User comments on Post: contains &apos;link&apos; · Opening Message: DM: Hey! Thanks for asking! 😊 Here&apos;s the link...
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-center font-bold text-stone-900">0</td>
-                  <td className="py-4 px-4 text-center font-bold text-stone-900">0</td>
-                  <td className="py-4 px-4 text-center text-stone-400 font-medium">—</td>
-                  <td className="py-4 px-4">
-                    {isLive ? (
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200/60">
-                        Live
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-bold text-stone-600 border border-stone-200">
-                        Paused
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-4 px-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsLive(!isLive)}
-                        className="h-7 rounded-lg text-xs font-semibold px-2.5 border-stone-200 text-stone-700 hover:bg-stone-100"
-                      >
-                        {isLive ? (
-                          <>
-                            <Pause className="mr-1 h-3 w-3" />
-                            <span>Pause</span>
-                          </>
-                        ) : (
-                          <>
-                            <Play className="mr-1 h-3 w-3 fill-stone-700" />
-                            <span>Resume</span>
-                          </>
-                        )}
-                      </Button>
-                      <button
-                        type="button"
-                        aria-label="More options"
-                        className="rounded-lg p-1 text-stone-400 hover:text-stone-700 cursor-pointer"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Top Performers Section (Matching Screenshot 1) */}
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-bold text-stone-900">Top Performers</h2>
-          <p className="text-xs text-stone-500">Last 7 days</p>
-        </div>
-
-        <div className="rounded-2xl border border-stone-200/80 bg-white p-6 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-stone-100 pb-4">
-            <div className="flex items-center gap-2 font-bold text-xs text-stone-900">
-              <BarChart3 className="h-4 w-4 text-stone-500" />
-              <span>Top Performing Automations</span>
+          {automations.length === 0 ? (
+            <div className="p-8 text-center space-y-3">
+              <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                <Plus className="h-6 w-6" />
+              </div>
+              <h3 className="text-sm font-bold text-stone-900">No automations created yet</h3>
+              <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                Set up your first comment or story trigger to start automatically sending DMs to your audience.
+              </p>
+              <div className="pt-2">
+                <Link
+                  href="/dashboard/automations/create"
+                  className="inline-flex items-center gap-2 rounded-full bg-[hsl(340_82%_62%)] hover:bg-[hsl(340_82%_55%)] px-4 py-2 text-xs font-bold text-white shadow-xs transition"
+                >
+                  <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                  <span>Create First Automation</span>
+                </Link>
+              </div>
             </div>
-            <Link
-              href="/dashboard/insights"
-              className="flex items-center gap-1 text-xs font-semibold text-stone-900 hover:underline"
-            >
-              <span>View All</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-stone-100 bg-stone-50/50 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                  <tr>
+                    <th className="py-3 px-5">NAME</th>
+                    <th className="py-3 px-4 text-center">DMS</th>
+                    <th className="py-3 px-4 text-center">CLICKS</th>
+                    <th className="py-3 px-4 text-center">CTR</th>
+                    <th className="py-3 px-4">STATUS</th>
+                    <th className="py-3 px-5 text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {automations.map((auto) => {
+                    const ctr =
+                      auto.dmsSentCount > 0
+                        ? `${Math.round((auto.clicksCount / auto.dmsSentCount) * 100)}%`
+                        : "—"
+                    const isLive = auto.status === "LIVE"
 
-          {/* Minimal Empty State Bar Chart Graphic */}
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="flex items-end gap-1.5 h-14 mb-3 text-stone-300">
-              <div className="w-2.5 bg-stone-200 rounded-t h-4" />
-              <div className="w-2.5 bg-stone-200 rounded-t h-8" />
-              <div className="w-2.5 bg-stone-300 rounded-t h-12" />
-              <div className="w-2.5 bg-stone-200 rounded-t h-6" />
-              <div className="w-2.5 bg-stone-200 rounded-t h-3" />
+                    return (
+                      <tr key={auto.id} className="hover:bg-stone-50/40 transition">
+                        <td className="py-4 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-gradient-to-tr from-sky-800 to-indigo-950 flex items-center justify-center text-white">
+                              <Play className="h-3.5 w-3.5 fill-white" />
+                            </div>
+                            <div className="space-y-0.5">
+                              <p className="font-bold text-stone-900">{auto.name}</p>
+                              <p className="text-[11px] text-stone-500 max-w-md line-clamp-1">
+                                Keywords: {auto.keywords.join(", ") || "any"} · Message: {auto.finalMessage}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-center font-bold text-stone-900">
+                          {auto.dmsSentCount}
+                        </td>
+                        <td className="py-4 px-4 text-center font-bold text-stone-900">
+                          {auto.clicksCount}
+                        </td>
+                        <td className="py-4 px-4 text-center text-stone-400 font-medium">
+                          {ctr}
+                        </td>
+                        <td className="py-4 px-4">
+                          {isLive ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200/60">
+                              Live
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-bold text-stone-600 border border-stone-200">
+                              Paused
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleAutomation(auto.id, auto.status)}
+                              className="h-7 rounded-lg text-xs font-semibold px-2.5 border-stone-200 text-stone-700 hover:bg-stone-100 cursor-pointer"
+                            >
+                              {isLive ? (
+                                <>
+                                  <Pause className="mr-1 h-3 w-3" />
+                                  <span>Pause</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="mr-1 h-3 w-3 fill-stone-700" />
+                                  <span>Activate</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-            <p className="text-xs font-semibold text-stone-700">No data for this period</p>
-            <p className="text-[11px] text-stone-400 mt-0.5">Last 7 days</p>
-          </div>
+          )}
         </div>
       </section>
     </div>

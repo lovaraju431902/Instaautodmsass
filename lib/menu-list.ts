@@ -9,6 +9,7 @@ import {
   LucideIcon,
   RotateCcw,
   Sparkles,
+  User,
   Users,
   Users2,
 } from "lucide-react"
@@ -112,6 +113,17 @@ export function getMenuList(pathname: string): Group[] {
               active: pathname === "/dashboard/insights/audience",
             },
           ],
+        },
+      ],
+    },
+    {
+      groupLabel: "Settings",
+      menus: [
+        {
+          href: "/dashboard/profile",
+          label: "Profile & Plan",
+          icon: User,
+          active: pathname.startsWith("/dashboard/profile") || pathname.startsWith("/dashboard/account"),
         },
         {
           href: "/dashboard/support",

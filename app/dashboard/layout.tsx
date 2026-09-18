@@ -74,7 +74,7 @@ export default function DashboardLayout({
       </div>
 
       {/* 5. Fixed Real-time Floating Metrics Widget on Right Edge */}
-      <FloatingStatsWidget dmsSent={0} linkClicks={0} ctr="0%" />
+      <FloatingStatsWidget />
     </div>
   )
 }

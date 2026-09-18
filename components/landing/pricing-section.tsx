@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { Check, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -154,19 +155,16 @@ export function PricingSection() {
 
               {/* Action CTA */}
               <div className="mt-8 pt-4">
-                <Button
-                  className={`w-full rounded-xl py-2.5 text-xs font-semibold transition-all ${
+                <Link
+                  href="/pricing"
+                  className={`w-full inline-flex items-center justify-center rounded-xl py-2.5 text-xs font-semibold transition-all ${
                     plan.popular
                       ? "bg-stone-900 text-white hover:bg-stone-800 shadow"
                       : "border border-border bg-white text-stone-800 hover:bg-stone-50"
                   }`}
-                  onClick={() => {
-                    const el = document.getElementById("faq")
-                    el?.scrollIntoView({ behavior: "smooth" })
-                  }}
                 >
                   {plan.cta}
-                </Button>
+                </Link>
               </div>
             </div>
           ))}

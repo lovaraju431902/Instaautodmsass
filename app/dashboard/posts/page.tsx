@@ -61,12 +61,13 @@ export default function PostsPage() {
           <p className="text-xs text-stone-500 mt-1">Manage comment triggers and direct message automation rules for your Instagram posts.</p>
         </div>
 
-        <Button asChild className="h-10 rounded-xl bg-stone-900 px-4 text-xs font-semibold text-white hover:bg-stone-800 shadow-sm">
-          <Link href="/dashboard/posts/new">
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            <span>New Post Automation</span>
-          </Link>
-        </Button>
+        <Link
+          href="/dashboard/posts/new"
+          className="inline-flex items-center justify-center h-10 rounded-xl bg-stone-900 px-4 text-xs font-semibold text-white hover:bg-stone-800 shadow-sm transition"
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          <span>New Post Automation</span>
+        </Link>
       </div>
 
       {/* Posts Table Card Container */}
