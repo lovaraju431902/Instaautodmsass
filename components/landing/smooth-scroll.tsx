@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname } from "next/navigation"
 import Lenis from "lenis"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
@@ -23,7 +23,6 @@ export function SmoothScrollProvider({
 }: SmoothScrollProviderProps) {
   const lenisRef = React.useRef<Lenis | null>(null)
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const prevPathRef = React.useRef<string>(pathname)
   const isInitial = React.useRef(true)
 
@@ -70,7 +69,7 @@ export function SmoothScrollProvider({
     }
     prevPathRef.current = pathname
     isInitial.current = false
-  }, [pathname, searchParams])
+  }, [pathname])
 
   // Intercept anchor navigation matching .lenis-scroll-to or hash links
   React.useEffect(() => {

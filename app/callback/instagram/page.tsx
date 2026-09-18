@@ -15,7 +15,7 @@ function InstagramIcon({ className = "h-6 w-6" }: { className?: string }) {
   )
 }
 
-export default function InstagramCallbackPage() {
+function InstagramCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [status, setStatus] = React.useState<"loading" | "success" | "error">("loading")
@@ -133,5 +133,24 @@ export default function InstagramCallbackPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function InstagramCallbackPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl border border-stone-200/80 text-center space-y-4">
+            <h2 className="text-lg font-bold text-stone-900">Connecting to Instagram...</h2>
+            <div className="flex justify-center pt-2">
+              <RefreshCw className="h-6 w-6 animate-spin text-rose-500" />
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <InstagramCallbackContent />
+    </React.Suspense>
   )
 }

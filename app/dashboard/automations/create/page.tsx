@@ -34,7 +34,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-export default function CreateAutomationPage() {
+function CreateAutomationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const triggerType = searchParams.get("type") || "comments"
@@ -907,5 +907,20 @@ export default function CreateAutomationPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CreateAutomationPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-stone-200 border-t-[hsl(340_82%_62%)]" />
+          <p className="text-xs font-semibold text-stone-500">Loading automation builder...</p>
+        </div>
+      }
+    >
+      <CreateAutomationContent />
+    </React.Suspense>
   )
 }
