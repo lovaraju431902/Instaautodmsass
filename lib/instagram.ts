@@ -1,8 +1,9 @@
 const INSTAGRAM_BASE_URL = process.env.INSTAGRAM_BASE_URL || "https://graph.instagram.com"
-const INSTAGRAM_CLIENT_ID = process.env.INSTAGRAM_CLIENT_ID || ""
-const INSTAGRAM_CLIENT_SECRET = process.env.INSTAGRAM_CLIENT_SECRET || ""
+const INSTAGRAM_CLIENT_ID = process.env.INSTAGRAM_APP_ID || process.env.INSTAGRAM_CLIENT_ID || ""
+const INSTAGRAM_CLIENT_SECRET = process.env.INSTAGRAM_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET || ""
 const INSTAGRAM_TOKEN_URL = process.env.INSTAGRAM_TOKEN_URL || "https://api.instagram.com/oauth/access_token"
-const NEXT_PUBLIC_HOST_URL = process.env.NEXT_PUBLIC_HOST_URL || "http://localhost:3000"
+const NEXT_PUBLIC_HOST_URL = process.env.NEXT_PUBLIC_HOST_URL || process.env.NEXT_PUBLIC_APP_URL || "https://nextzshop.online"
+const INSTAGRAM_REDIRECT_URI = process.env.INSTAGRAM_REDIRECT_URI || `${NEXT_PUBLIC_HOST_URL}/callback/instagram`
 
 export interface InstagramProfile {
   id: string
@@ -18,29 +19,38 @@ export interface InstagramProfile {
 export async function exchangeCodeForTokens(code: string): Promise<{
   accessToken: string
   userId: string
+  expiresIn?: number
   isDemo?: boolean
 }> {
-  // If demo credentials or test code, provide seamless demo fallback
+  const cleanCode = code.trim().replace(/#_$/, "").split("#")[0]
+
+  // If explicit demo test code or demo secret, provide seamless demo fallback
   if (
-    !INSTAGRAM_CLIENT_SECRET ||
-    INSTAGRAM_CLIENT_SECRET.startsWith("demo_") ||
-    code.startsWith("demo_")
+    cleanCode.startsWith("demo_") ||
+    INSTAGRAM_CLIENT_SECRET.startsWith("demo_")
   ) {
     return {
       accessToken: `ig_mock_long_lived_token_${Date.now()}`,
       userId: `ig_user_coder_431`,
+      expiresIn: 5184000,
       isDemo: true,
     }
   }
 
-  const redirectUri = `${NEXT_PUBLIC_HOST_URL}/callback/instagram`
+  if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_CLIENT_SECRET) {
+    throw new Error(
+      "Missing Meta/Instagram App ID or App Secret. Please configure INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET in environment variables."
+    )
+  }
+
+  const redirectUri = INSTAGRAM_REDIRECT_URI
 
   const body = new URLSearchParams({
     client_id: INSTAGRAM_CLIENT_ID,
     client_secret: INSTAGRAM_CLIENT_SECRET,
     grant_type: "authorization_code",
     redirect_uri: redirectUri,
-    code,
+    code: cleanCode,
   })
 
   const res = await fetch(INSTAGRAM_TOKEN_URL, {
@@ -51,12 +61,21 @@ export async function exchangeCodeForTokens(code: string): Promise<{
 
   if (!res.ok) {
     const errorText = await res.text()
-    throw new Error(`Instagram OAuth exchange failed: ${errorText}`)
+    let parsedMessage = errorText
+    try {
+      const errJson = JSON.parse(errorText)
+      parsedMessage =
+        errJson.error_message ||
+        errJson.error?.message ||
+        errJson.message ||
+        errorText
+    } catch {}
+    throw new Error(`Instagram OAuth exchange failed: ${parsedMessage}`)
   }
 
   const data = await res.json()
   const shortLivedToken = data.access_token
-  const userId = data.user_id
+  const userId = String(data.user_id)
 
   // Exchange short-lived token for 60-day long-lived token
   try {
@@ -67,8 +86,12 @@ export async function exchangeCodeForTokens(code: string): Promise<{
       const longLivedData = await longLivedRes.json()
       return {
         accessToken: longLivedData.access_token,
-        userId: String(userId),
+        userId,
+        expiresIn: longLivedData.expires_in || 5184000,
       }
+    } else {
+      const longLivedErr = await longLivedRes.text()
+      console.warn("Long-lived token exchange returned non-200:", longLivedErr)
     }
   } catch (err) {
     console.error("Failed to exchange for long-lived token, using short-lived:", err)
@@ -76,7 +99,8 @@ export async function exchangeCodeForTokens(code: string): Promise<{
 
   return {
     accessToken: shortLivedToken,
-    userId: String(userId),
+    userId,
+    expiresIn: 3600,
   }
 }
 
@@ -94,26 +118,44 @@ export async function fetchInstagramProfile(accessToken: string, userId: string)
     }
   }
 
-  const url = `${INSTAGRAM_BASE_URL}/v21.0/me?fields=id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`
-  const res = await fetch(url)
-
-  if (!res.ok) {
-    // Fallback profile if graph permission is still pending review
-    return {
-      id: userId,
-      username: "creator_account",
-      name: "Instagram Creator",
-      followersCount: 150,
+  // 1. Try full fields endpoint (standard for Instagram Business Login)
+  try {
+    const url = `${INSTAGRAM_BASE_URL}/v21.0/me?fields=id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`
+    const res = await fetch(url)
+    if (res.ok) {
+      const data = await res.json()
+      return {
+        id: data.id || userId,
+        username: data.username || "creator_account",
+        name: data.name || data.username || "Instagram Creator",
+        profilePictureUrl: data.profile_picture_url,
+        followersCount: data.followers_count || 0,
+      }
     }
+
+    // 2. Fallback to basic fields if followers_count permission is restricted
+    const basicUrl = `${INSTAGRAM_BASE_URL}/v21.0/me?fields=id,username,name,profile_picture_url&access_token=${accessToken}`
+    const basicRes = await fetch(basicUrl)
+    if (basicRes.ok) {
+      const basicData = await basicRes.json()
+      return {
+        id: basicData.id || userId,
+        username: basicData.username || "creator_account",
+        name: basicData.name || basicData.username || "Instagram Creator",
+        profilePictureUrl: basicData.profile_picture_url,
+        followersCount: 0,
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching Instagram profile from Graph API:", err)
   }
 
-  const data = await res.json()
+  // Fallback profile if graph permission is still pending review
   return {
-    id: data.id || userId,
-    username: data.username || "creator_account",
-    name: data.name || data.username,
-    profilePictureUrl: data.profile_picture_url,
-    followersCount: data.followers_count || 0,
+    id: userId,
+    username: "creator_account",
+    name: "Instagram Creator",
+    followersCount: 150,
   }
 }
 

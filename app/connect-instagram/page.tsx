@@ -123,6 +123,9 @@ export default function ConnectInstagramPage() {
   const [username, setUsername] = React.useState("")
   const [status, setStatus] = React.useState<"idle" | "searching" | "found" | "error" | "prompt">("idle")
   const [connecting, setConnecting] = React.useState(false)
+  const [oauthUrl, setOauthUrl] = React.useState<string>(
+    process.env.NEXT_PUBLIC_INSTAGRAM_OAUTH_URL || ""
+  )
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -136,6 +139,23 @@ export default function ConnectInstagramPage() {
       } else if (st === "found") {
         setUsername("coder_431")
         setStatus("found")
+      }
+
+      if (!process.env.NEXT_PUBLIC_INSTAGRAM_OAUTH_URL) {
+        const clientId =
+          process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID ||
+          process.env.NEXT_PUBLIC_INSTAGRAM_CLIENT_ID ||
+          "123456789012345"
+
+        const redirectUri =
+          process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI ||
+          `${window.location.origin}/callback/instagram`
+
+        const computedUrl = `https://api.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&scope=instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments&response_type=code`
+
+        setOauthUrl(computedUrl)
       }
     }
   }, [])
@@ -310,10 +330,7 @@ export default function ConnectInstagramPage() {
               {/* Direct Meta Official OAuth Button */}
               <div className="max-w-md mx-auto space-y-3">
                 <a
-                  href={
-                    process.env.NEXT_PUBLIC_INSTAGRAM_OAUTH_URL ||
-                    "https://api.instagram.com/oauth/authorize?client_id=123456789012345&redirect_uri=http://localhost:3000/callback/instagram&scope=instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments&response_type=code"
-                  }
+                  href={oauthUrl || "#"}
                   className="flex h-13 w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-sm font-bold text-white shadow-md hover:opacity-95 transition active:scale-98 cursor-pointer"
                 >
                   <InstagramIcon className="h-5 w-5 shrink-0" />

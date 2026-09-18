@@ -21,31 +21,51 @@ function InstagramCallbackContent() {
   const [status, setStatus] = React.useState<"loading" | "success" | "error">("loading")
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [connectedUsername, setConnectedUsername] = React.useState<string>("")
+  const hasRequested = React.useRef(false)
 
   React.useEffect(() => {
-    const code = searchParams.get("code")
     const error = searchParams.get("error")
+    const errorReason = searchParams.get("error_reason")
     const errorDescription = searchParams.get("error_description")
 
     if (error) {
       setStatus("error")
-      setErrorMessage(errorDescription || "Access authorization was cancelled or denied.")
+      setErrorMessage(
+        errorDescription ||
+        errorReason ||
+        "Access authorization was cancelled or denied by Instagram."
+      )
       return
     }
 
+    const rawCode = searchParams.get("code")
+    if (!rawCode) {
+      setStatus("error")
+      setErrorMessage(
+        "No authorization code received from Meta/Instagram. Please try connecting your account again."
+      )
+      return
+    }
+
+    // Prevent duplicate token exchange calls (e.g. React Strict Mode)
+    if (hasRequested.current) return
+    hasRequested.current = true
+
+    // Strip Meta trailing hash #_ from authorization code if present
+    const cleanCode = rawCode.trim().replace(/#_$/, "").split("#")[0]
+
     const exchangeCode = async () => {
       try {
-        const payloadCode = code || "demo_auth_code_12345"
         const res = await fetch("/api/instagram/callback", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: payloadCode }),
+          body: JSON.stringify({ code: cleanCode }),
         })
 
         const data = await res.json()
 
         if (!res.ok || !data.success) {
-          throw new Error(data.error || "Failed to exchange token with Instagram")
+          throw new Error(data.error || "Failed to exchange authorization code with Meta")
         }
 
         setConnectedUsername(data.account?.username || "creator")
@@ -55,9 +75,11 @@ function InstagramCallbackContent() {
           router.push("/dashboard")
         }, 1200)
       } catch (err: any) {
-        console.error("Callback error:", err)
+        console.error("Callback exchange error:", err)
         setStatus("error")
-        setErrorMessage(err.message || "An unexpected error occurred while linking Instagram.")
+        setErrorMessage(
+          err.message || "An unexpected error occurred while linking your Instagram account."
+        )
       }
     }
 

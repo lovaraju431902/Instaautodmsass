@@ -1,19 +1,52 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
 import { exchangeCodeForTokens, fetchInstagramProfile } from "@/lib/instagram"
 
 export async function POST(req: NextRequest) {
   try {
     const { code } = await req.json()
 
-    if (!code) {
-      return NextResponse.json({ error: "Missing authorization code" }, { status: 400 })
+    if (!code || typeof code !== "string" || !code.trim()) {
+      return NextResponse.json({ error: "Missing or invalid authorization code" }, { status: 400 })
     }
 
-    // 1. Check for authenticated user or retrieve default workspace
-    let workspace = await prisma.workspace.findFirst({
-      orderBy: { createdAt: "desc" },
-    })
+    const cleanCode = code.trim().replace(/#_$/, "").split("#")[0]
+
+    // 1. Check for authenticated Better Auth user session or retrieve default workspace
+    const session = await auth.api.getSession({ headers: req.headers }).catch(() => null)
+    let workspace = null
+
+    if (session?.user?.id) {
+      workspace = await prisma.workspace.findFirst({
+        where: {
+          OR: [
+            { ownerId: session.user.id },
+            { members: { some: { userId: session.user.id } } },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+      })
+
+      if (!workspace) {
+        workspace = await prisma.workspace.create({
+          data: {
+            name: `${session.user.name || "Creator"}'s Workspace`,
+            slug: `workspace-${Date.now()}`,
+            ownerId: session.user.id,
+            monthlyDmLimit: 500,
+            dmsSentThisMonth: 0,
+            maxIgAccounts: 1,
+          },
+        })
+      }
+    }
+
+    if (!workspace) {
+      workspace = await prisma.workspace.findFirst({
+        orderBy: { createdAt: "desc" },
+      })
+    }
 
     if (!workspace) {
       let user = await prisma.user.findFirst()
@@ -40,18 +73,23 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Exchange authorization code with Meta Graph API
-    const tokenData = await exchangeCodeForTokens(code)
+    const tokenData = await exchangeCodeForTokens(cleanCode)
     const profile = await fetchInstagramProfile(tokenData.accessToken, tokenData.userId)
+    const tokenExpiresAt = tokenData.expiresIn
+      ? new Date(Date.now() + tokenData.expiresIn * 1000)
+      : null
 
     // 3. Upsert Instagram Account in Prisma DB
     const account = await prisma.instagramAccount.upsert({
       where: { instagramId: profile.id },
       update: {
+        workspaceId: workspace.id,
         username: profile.username,
         name: profile.name,
         profilePictureUrl: profile.profilePictureUrl,
         followersCount: profile.followersCount,
         accessToken: tokenData.accessToken,
+        tokenExpiresAt,
         status: "CONNECTED",
       },
       create: {
@@ -62,6 +100,7 @@ export async function POST(req: NextRequest) {
         profilePictureUrl: profile.profilePictureUrl,
         followersCount: profile.followersCount,
         accessToken: tokenData.accessToken,
+        tokenExpiresAt,
         status: "CONNECTED",
       },
     })
