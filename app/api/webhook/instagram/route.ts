@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // 2. Handle Direct Messaging changes
+      // 2. Handleee Direct Messaging changes
       for (const msg of messaging) {
         if (msg.message?.text) {
           await inngest.send({
