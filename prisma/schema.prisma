@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -12,17 +12,17 @@ datasource db {
 // ============================================================================
 
 model User {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Better Auth Relations
-  sessions      Session[]
-  accounts      Account[]
+  sessions Session[]
+  accounts Account[]
 
   // Multi-Tenant Workspace Relations
   ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
@@ -102,11 +102,11 @@ enum MemberRole {
 }
 
 model Workspace {
-  id          String   @id @default(cuid())
-  name        String   @default("My Workspace")
-  slug        String   @unique
-  ownerId     String
-  owner       User     @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  name    String @default("My Workspace")
+  slug    String @unique
+  ownerId String
+  owner   User   @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   // Subscription & Limits
   planTier           PlanTier           @default(FREE)
@@ -117,19 +117,19 @@ model Workspace {
   currentPeriodEnd   DateTime?
 
   // Quotas & Usage Tracking (UI: 0/500 DMs, 1/1 IG accounts)
-  monthlyDmLimit     Int      @default(500)
-  dmsSentThisMonth   Int      @default(0)
-  maxIgAccounts      Int      @default(1)
+  monthlyDmLimit   Int @default(500)
+  dmsSentThisMonth Int @default(0)
+  maxIgAccounts    Int @default(1)
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Workspace Relations
-  members            WorkspaceMember[]
-  instagramAccounts  InstagramAccount[]
-  automations        Automation[]
-  contacts           Contact[]
-  activityLogs       ActivityLog[]
+  members           WorkspaceMember[]
+  instagramAccounts InstagramAccount[]
+  automations       Automation[]
+  contacts          Contact[]
+  activityLogs      ActivityLog[]
 
   @@index([ownerId])
   @@map("workspace")
@@ -143,8 +143,8 @@ model WorkspaceMember {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -164,30 +164,30 @@ enum IgAccountStatus {
 }
 
 model InstagramAccount {
-  id                String          @id @default(cuid())
-  workspaceId       String
-  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   // Meta Instagram Graph API Identifiers
-  instagramId       String          @unique // Instagram Business/Creator Account ID
-  username          String          // e.g. "coder_431"
+  instagramId       String  @unique // Instagram Business/Creator Account ID
+  username          String // e.g. "coder_431"
   name              String?
-  profilePictureUrl String?         @db.Text
-  followersCount    Int             @default(0)
+  profilePictureUrl String? @db.Text
+  followersCount    Int     @default(0)
 
   // Meta OAuth Tokens
-  accessToken       String          @db.Text // Long-lived page/user access token
-  tokenExpiresAt    DateTime?
-  facebookPageId    String?
+  accessToken    String    @db.Text // Long-lived page/user access token
+  tokenExpiresAt DateTime?
+  facebookPageId String?
 
-  status            IgAccountStatus @default(CONNECTED)
-  connectedAt       DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  status      IgAccountStatus @default(CONNECTED)
+  connectedAt DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   // Relations
-  posts             Post[]
-  automations       Automation[]
-  contacts          Contact[]
+  posts       Post[]
+  automations Automation[]
+  contacts    Contact[]
 
   @@index([workspaceId])
   @@map("instagram_account")
@@ -211,25 +211,25 @@ model Post {
   instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
 
   // Instagram Graph API Details
-  mediaId            String           @unique // Instagram Media IGID
-  mediaType          MediaType        @default(REEL)
-  caption            String?          @db.Text
-  permalink          String?          @db.Text
-  thumbnailUrl       String?          @db.Text
-  mediaUrl           String?          @db.Text
+  mediaId      String    @unique // Instagram Media IGID
+  mediaType    MediaType @default(REEL)
+  caption      String?   @db.Text
+  permalink    String?   @db.Text
+  thumbnailUrl String?   @db.Text
+  mediaUrl     String?   @db.Text
 
   // Performance Metrics
-  viewsCount         Int              @default(0)
-  likesCount         Int              @default(0)
-  commentsCount      Int              @default(0)
-  dmClicksCount      Int              @default(0)
+  viewsCount    Int @default(0)
+  likesCount    Int @default(0)
+  commentsCount Int @default(0)
+  dmClicksCount Int @default(0)
 
-  postedAt           DateTime
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  postedAt  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Automations tied specifically to this post
-  automations        Automation[]
+  automations Automation[]
 
   @@index([instagramAccountId])
   @@map("post")
@@ -246,77 +246,77 @@ enum AutomationStatus {
 }
 
 enum TriggerType {
-  COMMENTS     // User comments on post/reel
-  STORIES      // User reacts or replies to story
-  KEYWORDS     // User sends direct DM with keyword
+  COMMENTS // User comments on post/reel
+  STORIES // User reacts or replies to story
+  KEYWORDS // User sends direct DM with keyword
 }
 
 enum PostTargetType {
-  SPECIFIC     // A specific post or reel
-  NEXT         // Next post or reel published
-  ANY          // Any post or reel on account
+  SPECIFIC // A specific post or reel
+  NEXT // Next post or reel published
+  ANY // Any post or reel on account
 }
 
 enum KeywordMatchType {
   SPECIFIC_KEYWORD // Contains one of specific configured keywords
-  ANY_WORD         // Any comment or word triggers automation
+  ANY_WORD // Any comment or word triggers automation
 }
 
 model Automation {
-  id                 String           @id @default(cuid())
-  workspaceId        String
-  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   instagramAccountId String
   instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
 
-  name               String           @default("Comments → DM")
-  status             AutomationStatus @default(LIVE)
+  name   String           @default("Comments → DM")
+  status AutomationStatus @default(LIVE)
 
   // Step 1: Trigger & Target Selection
-  triggerType        TriggerType      @default(COMMENTS)
-  postTargetType     PostTargetType   @default(SPECIFIC)
-  specificPostId     String?
-  specificPost       Post?            @relation(fields: [specificPostId], references: [id], onDelete: SetNull)
+  triggerType    TriggerType    @default(COMMENTS)
+  postTargetType PostTargetType @default(SPECIFIC)
+  specificPostId String?
+  specificPost   Post?          @relation(fields: [specificPostId], references: [id], onDelete: SetNull)
 
   // Step 2: Keyword Rules & Public Reply
-  keywordMatchType   KeywordMatchType @default(SPECIFIC_KEYWORD)
-  isPublicReplyOn    Boolean          @default(false)
-  publicReplyText    String?          @db.Text // e.g. "Check your DMs! 💬"
+  keywordMatchType KeywordMatchType @default(SPECIFIC_KEYWORD)
+  isPublicReplyOn  Boolean          @default(false)
+  publicReplyText  String?          @db.Text // e.g. "Check your DMs! 💬"
 
   // Step 3: Opening DM (Optional Greeting Flow)
-  openingDmEnabled   Boolean          @default(true)
-  openingMessage     String?          @db.Text // e.g. "Hey! Thanks for your comment! 😊\n\nI'm so glad you're interested!"
-  buttonText         String?          @default("Send me the link")
+  openingDmEnabled Boolean @default(true)
+  openingMessage   String? @db.Text // e.g. "Hey! Thanks for your comment! 😊\n\nI'm so glad you're interested!"
+  buttonText       String? @default("Send me the link")
 
   // Step 4: Final Message & Link Delivery
-  finalMessage       String           @db.Text // e.g. "Hey! Thanks for asking! 😊 Here's the link: [LINK]"
-  destinationUrl     String?          @db.Text // e.g. "https://instadm.link/access"
+  finalMessage   String  @db.Text // e.g. "Hey! Thanks for asking! 😊 Here's the link: [LINK]"
+  destinationUrl String? @db.Text // e.g. "https://instadm.link/access"
 
   // AI Conversational Intelligence (Optional AI Auto-Reply)
-  useAiAssistant     Boolean          @default(false)
-  aiSystemPrompt     String?          @db.Text
-  aiModel            String?          @default("gemini-1.5-flash")
+  useAiAssistant Boolean @default(false)
+  aiSystemPrompt String? @db.Text
+  aiModel        String? @default("gemini-1.5-flash")
 
   // Pro Features & Safety Controls
-  requireFollow      Boolean          @default(false)
-  collectEmail       Boolean          @default(false)
-  randomizeDelay     Boolean          @default(true) // Anti-spam randomized delay
-  delayMinSeconds    Float            @default(0.5)
-  delayMaxSeconds    Float            @default(2.5)
-  filterDuplicates   Boolean          @default(true) // Ignore multiple comments from same user
+  requireFollow    Boolean @default(false)
+  collectEmail     Boolean @default(false)
+  randomizeDelay   Boolean @default(true) // Anti-spam randomized delay
+  delayMinSeconds  Float   @default(0.5)
+  delayMaxSeconds  Float   @default(2.5)
+  filterDuplicates Boolean @default(true) // Ignore multiple comments from same user
 
   // Metrics Cache
-  dmsSentCount       Int              @default(0)
-  clicksCount        Int              @default(0)
+  dmsSentCount Int @default(0)
+  clicksCount  Int @default(0)
 
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  keywords           AutomationKeyword[]
-  activityLogs       ActivityLog[]
-  linkClicks         LinkClick[]
+  keywords     AutomationKeyword[]
+  activityLogs ActivityLog[]
+  linkClicks   LinkClick[]
 
   @@index([workspaceId])
   @@index([instagramAccountId])
@@ -329,8 +329,8 @@ model AutomationKeyword {
   automationId String
   automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
 
-  keyword      String     // e.g. "link", "details", "shop", "price"
-  createdAt    DateTime   @default(now())
+  keyword   String // e.g. "link", "details", "shop", "price"
+  createdAt DateTime @default(now())
 
   @@unique([automationId, keyword])
   @@index([automationId])
@@ -350,24 +350,24 @@ enum TemplateCategory {
 }
 
 model AutomationTemplate {
-  id             String           @id @default(cuid())
-  title          String           // e.g. "Send link on keyword"
-  slug           String           @unique
-  description    String           @db.Text
-  category       TemplateCategory @default(POPULAR)
-  triggerType    TriggerType      @default(COMMENTS)
+  id          String           @id @default(cuid())
+  title       String // e.g. "Send link on keyword"
+  slug        String           @unique
+  description String           @db.Text
+  category    TemplateCategory @default(POPULAR)
+  triggerType TriggerType      @default(COMMENTS)
 
   // Preview Mockups
-  commentMock    String
-  replyMock      String
-  buttonText     String
+  commentMock String
+  replyMock   String
+  buttonText  String
 
   // Pre-filled Config
-  defaultMessage String           @db.Text
-  isFeatured     Boolean          @default(false)
+  defaultMessage String  @db.Text
+  isFeatured     Boolean @default(false)
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("automation_template")
 }
@@ -385,36 +385,36 @@ enum ContactStatus {
 }
 
 model Contact {
-  id                 String           @id @default(cuid())
-  workspaceId        String
-  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   instagramAccountId String
   instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
 
   // Instagram Lead Details
-  instagramUserId    String           // Instagram Scoped User ID (IGSID)
-  username           String?          // e.g. "john_doe"
-  fullName           String?
-  profilePictureUrl  String?          @db.Text
+  instagramUserId   String // Instagram Scoped User ID (IGSID)
+  username          String? // e.g. "john_doe"
+  fullName          String?
+  profilePictureUrl String? @db.Text
 
   // Captured Contact Info
-  email              String?
-  phone              String?
-  isFollower         Boolean          @default(false)
-  status             ContactStatus    @default(NEW)
+  email      String?
+  phone      String?
+  isFollower Boolean       @default(false)
+  status     ContactStatus @default(NEW)
 
   // Engagement Metrics
-  totalDmsReceived   Int              @default(0)
-  totalLinksClicked  Int              @default(0)
-  lastInteractionAt  DateTime         @default(now())
+  totalDmsReceived  Int      @default(0)
+  totalLinksClicked Int      @default(0)
+  lastInteractionAt DateTime @default(now())
 
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  activityLogs       ActivityLog[]
-  linkClicks         LinkClick[]
+  activityLogs ActivityLog[]
+  linkClicks   LinkClick[]
 
   @@unique([instagramAccountId, instagramUserId])
   @@index([workspaceId])
@@ -445,21 +445,21 @@ enum EventStatus {
 }
 
 model ActivityLog {
-  id           String      @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   automationId String?
   automation   Automation? @relation(fields: [automationId], references: [id], onDelete: SetNull)
 
-  contactId    String?
-  contact      Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
 
-  eventType    EventType
-  status       EventStatus @default(SUCCESS)
-  messageText  String?     @db.Text
-  metadata     Json?       // Raw webhook payload, error codes, response latency
-  createdAt    DateTime    @default(now())
+  eventType   EventType
+  status      EventStatus @default(SUCCESS)
+  messageText String?     @db.Text
+  metadata    Json? // Raw webhook payload, error codes, response latency
+  createdAt   DateTime    @default(now())
 
   @@index([workspaceId])
   @@index([automationId])
@@ -469,18 +469,18 @@ model ActivityLog {
 }
 
 model LinkClick {
-  id           String      @id @default(cuid())
+  id           String     @id @default(cuid())
   automationId String
-  automation   Automation  @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  automation   Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
 
-  contactId    String?
-  contact      Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
 
-  url          String      @db.Text
-  ipAddress    String?
-  userAgent    String?     @db.Text
-  country      String?
-  clickedAt    DateTime    @default(now())
+  url       String   @db.Text
+  ipAddress String?
+  userAgent String?  @db.Text
+  country   String?
+  clickedAt DateTime @default(now())
 
   @@index([automationId])
   @@index([contactId])
