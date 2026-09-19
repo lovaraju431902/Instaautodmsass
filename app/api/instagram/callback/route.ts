@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
-import { exchangeCodeForTokens, fetchInstagramProfile } from "@/lib/instagram"
+import { exchangeCodeForTokens, fetchInstagramProfile, fetchInstagramMedia } from "@/lib/instagram"
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,23 +78,54 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 4. Ensure initial post preview exists in DB for dashboard reel preview
-    const existingPost = await prisma.post.findFirst({
-      where: { instagramAccountId: account.id },
-    })
-
-    if (!existingPost) {
-      await prisma.post.create({
-        data: {
-          instagramAccountId: account.id,
-          mediaId: `media_${Date.now()}`,
-          mediaType: "REEL",
-          caption: "Welcome to my automated Instagram Reel! 🚀",
-          likesCount: 14,
-          commentsCount: 3,
-          postedAt: new Date(),
-        },
+    // 4. Fetch and save real media (posts & reels) from Meta Graph API
+    const realMedia = await fetchInstagramMedia(tokenData.accessToken)
+    if (realMedia.length > 0) {
+      for (const item of realMedia) {
+        await prisma.post.upsert({
+          where: { mediaId: item.id },
+          update: {
+            caption: item.caption,
+            mediaType: item.mediaType,
+            mediaUrl: item.mediaUrl,
+            thumbnailUrl: item.thumbnailUrl,
+            permalink: item.permalink,
+            likesCount: item.likesCount,
+            commentsCount: item.commentsCount,
+            postedAt: new Date(item.timestamp),
+          },
+          create: {
+            instagramAccountId: account.id,
+            mediaId: item.id,
+            caption: item.caption,
+            mediaType: item.mediaType,
+            mediaUrl: item.mediaUrl,
+            thumbnailUrl: item.thumbnailUrl,
+            permalink: item.permalink,
+            likesCount: item.likesCount,
+            commentsCount: item.commentsCount,
+            postedAt: new Date(item.timestamp),
+          },
+        })
+      }
+    } else {
+      const existingPost = await prisma.post.findFirst({
+        where: { instagramAccountId: account.id },
       })
+
+      if (!existingPost) {
+        await prisma.post.create({
+          data: {
+            instagramAccountId: account.id,
+            mediaId: `media_${Date.now()}`,
+            mediaType: "REEL",
+            caption: "New Instagram Post",
+            likesCount: 0,
+            commentsCount: 0,
+            postedAt: new Date(),
+          },
+        })
+      }
     }
 
     // 5. Build response & set authentication cookies

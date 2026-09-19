@@ -52,6 +52,8 @@ interface DashboardStats {
     mediaType?: string
     likesCount?: number
     commentsCount?: number
+    mediaUrl?: string
+    thumbnailUrl?: string
   } | null
 }
 
@@ -60,9 +62,10 @@ export default function DashboardHomePage() {
   const [loading, setLoading] = React.useState(true)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
 
-  const fetchStats = async () => {
+  const fetchStats = async (refresh = false) => {
     try {
-      const res = await fetch("/api/dashboard/stats")
+      const url = refresh ? "/api/dashboard/stats?refresh=true" : "/api/dashboard/stats"
+      const res = await fetch(url)
       if (res.ok) {
         const json = await res.json()
         setData(json)
@@ -81,7 +84,7 @@ export default function DashboardHomePage() {
 
   const handleRefresh = () => {
     setIsRefreshing(true)
-    fetchStats()
+    fetchStats(true)
   }
 
   const handleToggleAutomation = async (id: string, currentStatus: "LIVE" | "PAUSED") => {
@@ -179,10 +182,20 @@ export default function DashboardHomePage() {
             </div>
 
             {/* Video Preview Canvas */}
-            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-gradient-to-b from-sky-700 via-blue-900 to-emerald-950 flex items-center justify-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-xs text-white">
-                <Play className="h-4 w-4 fill-white translate-x-0.5" />
-              </div>
+            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-stone-900 flex items-center justify-center">
+              {data?.recentPost?.thumbnailUrl || data?.recentPost?.mediaUrl ? (
+                <img
+                  src={data.recentPost.thumbnailUrl || data.recentPost.mediaUrl}
+                  alt={data.recentPost.caption || "Reel"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="relative aspect-[4/5] w-full bg-gradient-to-b from-sky-700 via-blue-900 to-emerald-950 flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-xs text-white">
+                    <Play className="h-4 w-4 fill-white translate-x-0.5" />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Instagram Social Icons */}

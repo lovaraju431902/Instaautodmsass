@@ -94,46 +94,114 @@ export async function exchangeCodeForTokens(code: string): Promise<{
  * Fetch Instagram Business/Creator Account Profile Details
  */
 export async function fetchInstagramProfile(accessToken: string, userId: string): Promise<InstagramProfile> {
+  const fieldOptions = [
+    "id,username,name,profile_picture_url,followers_count,media_count",
+    "id,username,name,profile_picture_url,media_count",
+    "id,username,profile_picture_url",
+    "id,username",
+  ]
 
-  // 1. Try full fields endpoint (standard for Instagram Business Login)
-  try {
-    const url = `${INSTAGRAM_BASE_URL}/v21.0/me?fields=id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`
-    const res = await fetch(url)
-    if (res.ok) {
-      const data = await res.json()
-      return {
-        id: data.id || userId,
-        username: data.username || "creator_account",
-        name: data.name || data.username || "Instagram Creator",
-        profilePictureUrl: data.profile_picture_url,
-        followersCount: data.followers_count || 0,
+  const hostOptions = [
+    `${INSTAGRAM_BASE_URL}/v21.0/me`,
+    `${INSTAGRAM_BASE_URL}/v21.0/${userId}`,
+    `https://graph.facebook.com/v21.0/${userId}`,
+    `https://graph.facebook.com/v21.0/me`,
+  ]
+
+  for (const host of hostOptions) {
+    for (const fields of fieldOptions) {
+      try {
+        const url = `${host}?fields=${fields}&access_token=${accessToken}`
+        const res = await fetch(url)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.id || data.username) {
+            return {
+              id: data.id || userId,
+              username: data.username || "creator_account",
+              name: data.name || data.username || "Instagram Creator",
+              profilePictureUrl: data.profile_picture_url,
+              followersCount: Number(data.followers_count ?? data.followersCount ?? 0),
+            }
+          }
+        } else {
+          const errBody = await res.text().catch(() => "")
+          console.warn(`[Instagram Profile] ${host}?fields=${fields} returned ${res.status}:`, errBody)
+        }
+      } catch (err) {
+        console.warn(`[Instagram Profile] Fetch failed for ${host}:`, err)
       }
     }
-
-    // 2. Fallback to basic fields if followers_count permission is restricted
-    const basicUrl = `${INSTAGRAM_BASE_URL}/v21.0/me?fields=id,username,name,profile_picture_url&access_token=${accessToken}`
-    const basicRes = await fetch(basicUrl)
-    if (basicRes.ok) {
-      const basicData = await basicRes.json()
-      return {
-        id: basicData.id || userId,
-        username: basicData.username || "creator_account",
-        name: basicData.name || basicData.username || "Instagram Creator",
-        profilePictureUrl: basicData.profile_picture_url,
-        followersCount: 0,
-      }
-    }
-  } catch (err) {
-    console.error("Error fetching Instagram profile from Graph API:", err)
   }
 
-  // Fallback profile if graph permission is still pending review
   return {
     id: userId,
     username: "creator_account",
     name: "Instagram Creator",
-    followersCount: 150,
+    followersCount: 0,
   }
+}
+
+export interface InstagramMediaItem {
+  id: string
+  caption?: string
+  mediaType: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM" | "REEL"
+  mediaUrl?: string
+  permalink?: string
+  thumbnailUrl?: string
+  timestamp: string
+  likesCount: number
+  commentsCount: number
+}
+
+/**
+ * Fetch Real Instagram Media (Reels & Posts) from Meta Graph API
+ */
+export async function fetchInstagramMedia(accessToken: string): Promise<InstagramMediaItem[]> {
+  const fieldSets = [
+    "id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count",
+    "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count",
+    "id,caption,media_type,media_url,permalink,timestamp",
+  ]
+
+  const hostUrls = [
+    `${INSTAGRAM_BASE_URL}/v21.0/me/media`,
+    `https://graph.facebook.com/v21.0/me/media`,
+  ]
+
+  for (const host of hostUrls) {
+    for (const fields of fieldSets) {
+      try {
+        const url = `${host}?fields=${fields}&limit=30&access_token=${accessToken}`
+        const res = await fetch(url)
+        if (res.ok) {
+          const json = await res.json()
+          if (Array.isArray(json.data) && json.data.length > 0) {
+            return json.data.map((m: any) => ({
+              id: m.id,
+              caption: m.caption || "No caption",
+              mediaType: m.media_type === "VIDEO" ? "REEL" : (m.media_type || "IMAGE"),
+              mediaUrl: m.media_url || m.thumbnail_url,
+              permalink: m.permalink,
+              thumbnailUrl: m.thumbnail_url || m.media_url,
+              timestamp: m.timestamp || new Date().toISOString(),
+              likesCount: Number(m.like_count || 0),
+              commentsCount: Number(m.comments_count || 0),
+            }))
+          } else if (Array.isArray(json.data) && json.data.length === 0) {
+            return []
+          }
+        } else {
+          const errBody = await res.text().catch(() => "")
+          console.warn(`[Instagram Media] ${host}?fields=${fields} returned ${res.status}:`, errBody)
+        }
+      } catch (e) {
+        console.warn(`[Instagram Media] Failed fetching media from endpoint: ${host}`, e)
+      }
+    }
+  }
+
+  return []
 }
 
 /**

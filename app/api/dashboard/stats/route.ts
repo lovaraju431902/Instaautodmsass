@@ -3,8 +3,11 @@ import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url)
+    const forceRefresh = url.searchParams.get("refresh") === "true"
+
     const session = await auth.api.getSession({
       headers: await headers(),
     }).catch(() => null)
@@ -17,10 +20,34 @@ export async function GET() {
     }
 
     // 1. Fetch active workspace for this authenticated user
-    const workspace = await prisma.workspace.findFirst({
-      where: { ownerId: session.user.id },
+    let workspace = await prisma.workspace.findFirst({
+      where: {
+        OR: [
+          { ownerId: session.user.id },
+          { members: { some: { userId: session.user.id } } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
     })
+
+    // 2. Fetch connected Instagram account
+    let account = await prisma.instagramAccount.findFirst({
+      where: {
+        workspace: {
+          OR: [
+            { ownerId: session.user.id },
+            { members: { some: { userId: session.user.id } } },
+          ],
+        },
+      },
+      orderBy: { connectedAt: "desc" },
+    })
+
+    if (!workspace && account) {
+      workspace = await prisma.workspace.findUnique({
+        where: { id: account.workspaceId },
+      })
+    }
 
     if (!workspace) {
       return NextResponse.json({
@@ -33,16 +60,81 @@ export async function GET() {
         },
         automations: [],
         recentPost: null,
+        posts: [],
       })
     }
 
-    // 2. Fetch connected Instagram account
-    const account = await prisma.instagramAccount.findFirst({
-      where: { workspaceId: workspace.id },
-      orderBy: { connectedAt: "desc" },
-    })
+    // 3. Sync media from Meta Graph API if account exists
+    if (account?.accessToken) {
+      try {
+        const postsCount = await prisma.post.count({
+          where: { instagramAccountId: account.id },
+        })
 
-    // 3. Fetch real Automations
+        if (postsCount === 0 || forceRefresh) {
+          const { fetchInstagramMedia, fetchInstagramProfile } = await import("@/lib/instagram")
+          const [freshMedia, freshProfile] = await Promise.all([
+            fetchInstagramMedia(account.accessToken).catch(() => []),
+            fetchInstagramProfile(account.accessToken, account.instagramId).catch(() => null),
+          ])
+
+          if (freshProfile) {
+            account = await prisma.instagramAccount.update({
+              where: { id: account.id },
+              data: {
+                followersCount: freshProfile.followersCount ?? account.followersCount,
+                name: freshProfile.name || account.name,
+                profilePictureUrl: freshProfile.profilePictureUrl || account.profilePictureUrl,
+                username: freshProfile.username || account.username,
+              },
+            })
+          }
+
+          if (freshMedia.length > 0) {
+            for (const item of freshMedia) {
+              await prisma.post.upsert({
+                where: { mediaId: item.id },
+                update: {
+                  caption: item.caption,
+                  mediaType: item.mediaType,
+                  mediaUrl: item.mediaUrl,
+                  thumbnailUrl: item.thumbnailUrl,
+                  permalink: item.permalink,
+                  likesCount: item.likesCount,
+                  commentsCount: item.commentsCount,
+                  postedAt: new Date(item.timestamp),
+                },
+                create: {
+                  instagramAccountId: account.id,
+                  mediaId: item.id,
+                  caption: item.caption,
+                  mediaType: item.mediaType,
+                  mediaUrl: item.mediaUrl,
+                  thumbnailUrl: item.thumbnailUrl,
+                  permalink: item.permalink,
+                  likesCount: item.likesCount,
+                  commentsCount: item.commentsCount,
+                  postedAt: new Date(item.timestamp),
+                },
+              })
+            }
+          }
+        }
+      } catch (syncErr) {
+        console.warn("Could not sync real Instagram media:", syncErr)
+      }
+    }
+
+    // 4. Fetch all real Posts & Reels
+    const posts = account
+      ? await prisma.post.findMany({
+          where: { instagramAccountId: account.id },
+          orderBy: { postedAt: "desc" },
+          take: 30,
+        })
+      : []
+
+    // 5. Fetch real Automations
     const automations = await prisma.automation.findMany({
       where: { workspaceId: workspace.id },
       include: {
@@ -51,21 +143,13 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     })
 
-    // 4. Calculate real metrics
+    // 6. Calculate real metrics
     const dmsSent = automations.reduce((sum, a) => sum + (a.dmsSentCount || 0), 0)
     const linkClicks = automations.reduce((sum, a) => sum + (a.clicksCount || 0), 0)
 
     const leadsCollected = await prisma.contact.count({
       where: { workspaceId: workspace.id },
     })
-
-    // 5. Fetch most recent post / reel for preview card
-    const recentPost = account
-      ? await prisma.post.findFirst({
-          where: { instagramAccountId: account.id },
-          orderBy: { postedAt: "desc" },
-        })
-      : null
 
     return NextResponse.json({
       account: account
@@ -97,7 +181,19 @@ export async function GET() {
         destinationUrl: a.destinationUrl,
         useAiAssistant: a.useAiAssistant,
       })),
-      recentPost,
+      recentPost: posts[0] || null,
+      posts: posts.map((p) => ({
+        id: p.id,
+        mediaId: p.mediaId,
+        mediaType: p.mediaType,
+        caption: p.caption || "Instagram Post",
+        mediaUrl: p.mediaUrl,
+        thumbnailUrl: p.thumbnailUrl,
+        permalink: p.permalink,
+        likesCount: p.likesCount,
+        commentsCount: p.commentsCount,
+        postedAt: p.postedAt,
+      })),
     })
   } catch (error: any) {
     console.error("Failed to load dashboard stats:", error)
