@@ -170,7 +170,7 @@ model InstagramAccount {
 
   // Meta Instagram Graph API Identifiers
   instagramId       String  @unique // Instagram Business/Creator Account ID
-  username          String // e.g. "coder_431"
+  username          String // e.g. "your_instagram_handle"
   name              String?
   profilePictureUrl String? @db.Text
   followersCount    Int     @default(0)

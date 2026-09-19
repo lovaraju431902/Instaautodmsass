@@ -203,7 +203,7 @@ export function AudienceShowcase() {
 
                 {/* Table Footer */}
                 <div className="mt-4 flex items-center justify-between border-t border-border/70 pt-3 text-[11px] text-stone-500">
-                  <span>Showing {filteredContacts.length} of 892 contacts (Demo data)</span>
+                  <span>Showing {filteredContacts.length} of 892 contacts</span>
                   <div className="flex items-center gap-1 text-[11px] font-medium text-stone-700">
                     <Download className="h-3.5 w-3.5" />
                     <span>Export CSV</span>

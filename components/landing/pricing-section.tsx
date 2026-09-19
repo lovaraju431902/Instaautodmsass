@@ -89,7 +89,7 @@ export function PricingSection() {
           </p>
 
           <p className="mt-2 text-xs text-stone-400">
-            * All figures are preliminary placeholder pricing for demo evaluation.
+            * All plans include a 14-day free trial with full feature access.
           </p>
         </div>
 

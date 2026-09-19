@@ -38,9 +38,9 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith("/connect-instagram")) {
     if (!isAuthenticated) {
       // Must be logged in to connect Instagram
-      const loginUrl = new URL("/login", request.url)
-      loginUrl.searchParams.set("callbackUrl", pathname)
-      return NextResponse.redirect(loginUrl)
+      const signinUrl = new URL("/signin", request.url)
+      signinUrl.searchParams.set("callbackUrl", pathname)
+      return NextResponse.redirect(signinUrl)
     }
 
     // If Instagram is already connected, redirect to /dashboard
@@ -53,8 +53,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 4. Dashboard routes: allow direct access without redirect loops
+  // 4. Protected routes: /dashboard and all subroutes require authentication
   if (pathname.startsWith("/dashboard")) {
+    if (!isAuthenticated) {
+      const signinUrl = new URL("/signin", request.url)
+      signinUrl.searchParams.set("callbackUrl", pathname)
+      return NextResponse.redirect(signinUrl)
+    }
     return NextResponse.next()
   }
 

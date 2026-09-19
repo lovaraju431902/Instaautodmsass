@@ -136,19 +136,12 @@ function InstagramCallbackContent() {
             <p className="text-xs text-red-600 bg-red-50 p-3 rounded-xl border border-red-200">
               {errorMessage}
             </p>
-            <div className="pt-2 flex flex-col gap-2">
+            <div className="pt-2">
               <Button
                 onClick={() => router.push("/connect-instagram")}
                 className="w-full h-11 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold"
               >
                 Try Again
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => router.push("/dashboard")}
-                className="w-full text-xs text-stone-500"
-              >
-                Go to Dashboard anyway (Demo mode)
               </Button>
             </div>
           </div>

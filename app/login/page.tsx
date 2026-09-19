@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Eye, EyeOff, Lock, Mail, Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react"
+import { ArrowRight, Eye, EyeOff, Lock, Mail, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { AuthShell } from "@/components/auth/auth-shell"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -74,26 +74,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleDemoLogin = async () => {
-    setGlobalError(null)
-    setLoading(true)
-    try {
-      const res = await fetch("/api/auth/demo-login", { method: "POST" })
-      if (res.ok) {
-        setSuccess(true)
-        setTimeout(() => {
-          const igConnected = document.cookie.includes("instadm_ig_connected=true")
-          router.push(igConnected ? "/dashboard" : "/connect-instagram")
-        }, 600)
-      } else {
-        setGlobalError("Failed to initiate demo session.")
-      }
-    } catch (err: unknown) {
-      setGlobalError(err instanceof Error ? err.message : "Failed to initiate demo session.")
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleForgotPassword = () => {
     const promptEmail = prompt("Please enter your account email to receive password reset instructions:", email)
@@ -241,19 +221,6 @@ export default function LoginPage() {
               </span>
             )}
           </Button>
-
-          {/* Quick 1-Click Demo Login for Instant Testing */}
-          <div className="pt-1">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={handleDemoLogin}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-stone-200/90 bg-stone-50 py-2.5 text-xs font-semibold text-stone-700 hover:bg-stone-100 hover:text-stone-900 transition cursor-pointer"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-[hsl(340_82%_55%)]" />
-              <span>Instant Demo Login (1-Click)</span>
-            </button>
-          </div>
         </form>
       )}
     </AuthShell>

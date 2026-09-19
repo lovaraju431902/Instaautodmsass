@@ -72,17 +72,10 @@ export async function POST(req: NextRequest) {
     })
 
     if (!account) {
-      account = await prisma.instagramAccount.create({
-        data: {
-          workspaceId: workspace.id,
-          instagramId: `ig_creator_${Date.now()}`,
-          username: "coder_431",
-          name: "Coder 🤍 💥",
-          followersCount: 25,
-          accessToken: `token_${Date.now()}`,
-          status: "CONNECTED",
-        },
-      })
+      return NextResponse.json(
+        { error: "No connected Instagram account found. Please connect your official Instagram account first." },
+        { status: 400 }
+      )
     }
 
     // 2. Create Automation

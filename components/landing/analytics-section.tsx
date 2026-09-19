@@ -107,7 +107,7 @@ export function AnalyticsSection() {
                       Performance Overview
                     </h4>
                     <p className="text-[11px] text-stone-500">
-                      Live aggregate statistics (Demo data)
+                      Live aggregate statistics across channels
                     </p>
                   </div>
 

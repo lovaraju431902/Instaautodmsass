@@ -36,6 +36,31 @@ export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps
   const userName = session?.user?.name || "Creator"
   const userInitial = userName.charAt(0).toUpperCase() || "C"
 
+  const [stats, setStats] = React.useState<{
+    hasAccount: boolean
+    dmsSent: number
+    monthlyLimit: number
+  }>({
+    hasAccount: false,
+    dmsSent: 0,
+    monthlyLimit: 500,
+  })
+
+  React.useEffect(() => {
+    fetch("/api/dashboard/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) {
+          setStats({
+            hasAccount: Boolean(d.account),
+            dmsSent: d.stats?.dmsSentThisMonth ?? d.stats?.dmsSent ?? 0,
+            monthlyLimit: d.stats?.monthlyDmLimit ?? 500,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [pathname])
+
   const handleSignOut = async () => {
     setSigningOut(true)
     try {
@@ -43,7 +68,7 @@ export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps
     } catch {
       // ignore
     } finally {
-      router.push("/login")
+      router.push("/signin")
     }
   }
 
@@ -158,10 +183,20 @@ export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps
             <div>
               <div className="flex items-center justify-between text-[11px] text-stone-500 font-medium">
                 <span>DMs sent</span>
-                <span className="font-bold text-stone-900">0/500</span>
+                <span className="font-bold text-stone-900">
+                  {stats.dmsSent}/{stats.monthlyLimit}
+                </span>
               </div>
               <div className="mt-1 h-1.5 w-full rounded-full bg-stone-100 overflow-hidden">
-                <div className="h-full bg-[hsl(340_82%_62%)] w-[2%]" />
+                <div
+                  className="h-full bg-[hsl(340_82%_62%)]"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(2, (stats.dmsSent / (stats.monthlyLimit || 1)) * 100)
+                    )}%`,
+                  }}
+                />
               </div>
             </div>
 
@@ -169,10 +204,15 @@ export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps
             <div>
               <div className="flex items-center justify-between text-[11px] text-stone-500 font-medium">
                 <span>IG accounts</span>
-                <span className="font-bold text-stone-900">1/1</span>
+                <span className="font-bold text-stone-900">
+                  {stats.hasAccount ? "1/1" : "0/1"}
+                </span>
               </div>
               <div className="mt-1 h-1.5 w-full rounded-full bg-stone-100 overflow-hidden">
-                <div className="h-full bg-[hsl(340_82%_62%)] w-full" />
+                <div
+                  className="h-full bg-[hsl(340_82%_62%)]"
+                  style={{ width: stats.hasAccount ? "100%" : "0%" }}
+                />
               </div>
             </div>
 
@@ -227,9 +267,14 @@ export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <Tooltip content="DMs Sent: 0/500 | IG Accounts: 1/1" side="right">
+            <Tooltip
+              content={`DMs Sent: ${stats.dmsSent}/${stats.monthlyLimit} | IG Accounts: ${
+                stats.hasAccount ? "1/1" : "0/1"
+              }`}
+              side="right"
+            >
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-100 text-[10px] font-bold text-stone-700">
-                0/500
+                {stats.dmsSent}/{stats.monthlyLimit}
               </div>
             </Tooltip>
             <Tooltip content="Upgrade Plan" side="right">

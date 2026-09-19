@@ -20,30 +20,11 @@ export async function POST(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     })
 
-    // If no workspace exists yet, create default one
     if (!workspace) {
-      // Find or create default user if needed
-      let user = await prisma.user.findFirst()
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            name: "John Doe",
-            email: "demo@instadm.co",
-            emailVerified: true,
-          },
-        })
-      }
-
-      workspace = await prisma.workspace.create({
-        data: {
-          name: "My Workspace",
-          slug: `workspace-${Date.now()}`,
-          ownerId: user.id,
-          monthlyDmLimit: 500,
-          dmsSentThisMonth: 0,
-          maxIgAccounts: 1,
-        },
-      })
+      return NextResponse.json(
+        { error: "Workspace not found. Please log in first." },
+        { status: 401 }
+      )
     }
 
     // 2. Create or update Instagram account in the workspace

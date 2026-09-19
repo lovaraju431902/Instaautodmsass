@@ -20,22 +20,8 @@ export async function exchangeCodeForTokens(code: string): Promise<{
   accessToken: string
   userId: string
   expiresIn?: number
-  isDemo?: boolean
 }> {
   const cleanCode = code.trim().replace(/#_$/, "").split("#")[0]
-
-  // If explicit demo test code or demo secret, provide seamless demo fallback
-  if (
-    cleanCode.startsWith("demo_") ||
-    INSTAGRAM_CLIENT_SECRET.startsWith("demo_")
-  ) {
-    return {
-      accessToken: `ig_mock_long_lived_token_${Date.now()}`,
-      userId: `ig_user_coder_431`,
-      expiresIn: 5184000,
-      isDemo: true,
-    }
-  }
 
   if (!INSTAGRAM_CLIENT_ID || !INSTAGRAM_CLIENT_SECRET) {
     throw new Error(
@@ -108,15 +94,6 @@ export async function exchangeCodeForTokens(code: string): Promise<{
  * Fetch Instagram Business/Creator Account Profile Details
  */
 export async function fetchInstagramProfile(accessToken: string, userId: string): Promise<InstagramProfile> {
-  if (accessToken.startsWith("ig_mock_")) {
-    return {
-      id: userId,
-      username: "coder_431",
-      name: "Coder 🤍 💥",
-      followersCount: 25,
-      profilePictureUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80",
-    }
-  }
 
   // 1. Try full fields endpoint (standard for Instagram Business Login)
   try {

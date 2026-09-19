@@ -97,7 +97,7 @@ export function HeroDashboardPreview() {
                   <div className="truncate text-xs font-semibold text-foreground">
                     Creator Studio
                   </div>
-                  <div className="text-[10px] text-stone-500">Free Tier Demo</div>
+                  <div className="text-[10px] text-stone-500">Starter Plan</div>
                 </div>
               </div>
 
