@@ -232,12 +232,14 @@ export async function fetchInstagramMedia(accessToken: string): Promise<Instagra
 export async function sendInstagramDm({
   accessToken,
   recipientId,
+  commentId,
   messageText,
   buttonText,
   buttonUrl,
 }: {
   accessToken: string
   recipientId: string
+  commentId?: string
   messageText: string
   buttonText?: string
   buttonUrl?: string
@@ -269,6 +271,9 @@ export async function sendInstagramDm({
     }
   }
 
+  // Meta Instagram Graph API requires recipient.comment_id when replying to a comment
+  const recipient = commentId ? { comment_id: commentId } : { id: recipientId }
+
   const res = await fetch(`${INSTAGRAM_BASE_URL}/v21.0/me/messages`, {
     method: "POST",
     headers: {
@@ -276,7 +281,7 @@ export async function sendInstagramDm({
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
-      recipient: { id: recipientId },
+      recipient,
       message: messagePayload,
     }),
   })
@@ -284,7 +289,7 @@ export async function sendInstagramDm({
   if (!res.ok) {
     const errorText = await res.text()
     console.error("Meta Graph API DM send error:", errorText)
-    return { success: false, error: errorText }
+    throw new Error(`Meta Graph API DM send error: ${errorText}`)
   }
 
   const result = await res.json()

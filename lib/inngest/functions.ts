@@ -147,11 +147,12 @@ export const processInstagramComment = inngest.createFunction(
         return auto.finalMessage
       })
 
-      // Step 7: Send Instagram DM via Meta Graph API
+      // Step 7: Send Instagram DM via Meta Graph API (Private Replies to comment)
       await step.run(`send-dm-${auto.id}`, async () => {
         await sendInstagramDm({
           accessToken: account.accessToken,
           recipientId: senderId,
+          commentId,
           messageText: dmMessage,
           buttonText: auto.buttonText || undefined,
           buttonUrl: auto.destinationUrl || undefined,
