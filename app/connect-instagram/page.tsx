@@ -4,16 +4,12 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
-  AlertCircle,
-  Camera,
-  Check,
   CheckCircle2,
-  ChevronRight,
-  HelpCircle,
-  RefreshCw,
   Sparkles,
-  User,
-  XCircle,
+  HelpCircle,
+  ExternalLink,
+  ShieldCheck,
+  ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -120,32 +116,17 @@ function InstagramIcon({ className = "h-4 w-4" }: { className?: string }) {
 
 export default function ConnectInstagramPage() {
   const router = useRouter()
-  const [username, setUsername] = React.useState("")
-  const [status, setStatus] = React.useState<"idle" | "searching" | "found" | "error" | "prompt">("idle")
-  const [connecting, setConnecting] = React.useState(false)
   const [oauthUrl, setOauthUrl] = React.useState<string>(
     process.env.NEXT_PUBLIC_INSTAGRAM_OAUTH_URL || ""
   )
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search)
-      const st = params.get("status")
-      if (st === "prompt" || st === "not-connected") {
-        setStatus("prompt")
-      } else if (st === "error") {
-        setUsername("raju")
-        setStatus("error")
-      } else if (st === "found") {
-        setUsername("coder_431")
-        setStatus("found")
-      }
-
       if (!process.env.NEXT_PUBLIC_INSTAGRAM_OAUTH_URL) {
         const clientId =
           process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID ||
           process.env.NEXT_PUBLIC_INSTAGRAM_CLIENT_ID ||
-          "123456789012345"
+          "1653575196383468"
 
         const redirectUri =
           process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI ||
@@ -160,424 +141,101 @@ export default function ConnectInstagramPage() {
     }
   }, [])
 
-  // Demo accounts data
-  const accountsDatabase: Record<
-    string,
-    { name: string; username: string; followers: number; posts: number; avatar: string }
-  > = {
-    coder_431: {
-      name: "Coder 🤍 💥",
-      username: "coder_431",
-      followers: 25,
-      posts: 1,
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80",
-    },
-    instadm_demo: {
-      name: "InstaDM Official",
-      username: "instadm_demo",
-      followers: 1248,
-      posts: 14,
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=160&q=80",
-    },
-  }
-
-  const handleFindAccount = (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    const clean = username.replace(/^@/, "").trim().toLowerCase()
-    if (!clean) return
-
-    setStatus("searching")
-
-    setTimeout(() => {
-      // If user typed "raju" or anything unknown, simulate error (Screenshot 2)
-      if (clean === "raju" || clean === "error" || clean === "test") {
-        setStatus("error")
-      } else {
-        // Found account (Screenshot 4) - default to coder_431 or custom handle
-        setStatus("found")
-      }
-    }, 600)
-  }
-
-  const handleConnect = async () => {
-    setConnecting(true)
-    const clean = username.replace(/^@/, "").trim() || "coder_431"
-    const matched = accountsDatabase[clean] || {
-      name: `${clean} 🤍 💥`,
-      username: clean,
-      followers: 25,
-      posts: 1,
-    }
-
-    try {
-      const res = await fetch("/api/instagram/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: matched.username,
-          followersCount: matched.followers,
-          postsCount: matched.posts,
-        }),
-      })
-
-      if (res.ok) {
-        // Set document cookie fallback
-        document.cookie = "instadm_ig_connected=true; path=/; max-age=2592000"
-        document.cookie = `instadm_ig_username=${matched.username}; path=/; max-age=2592000`
-        router.push("/dashboard")
-      } else {
-        // Still proceed to dashboard in demo mode
-        document.cookie = "instadm_ig_connected=true; path=/; max-age=2592000"
-        router.push("/dashboard")
-      }
-    } catch {
-      document.cookie = "instadm_ig_connected=true; path=/; max-age=2592000"
-      router.push("/dashboard")
-    } finally {
-      setConnecting(false)
-    }
-  }
-
-  const activeAccount = accountsDatabase[username.replace(/^@/, "").trim().toLowerCase()] || {
-    name: `${username.replace(/^@/, "").trim() || "Coder"} 🤍 💥`,
-    username: username.replace(/^@/, "").trim() || "coder_431",
-    followers: 25,
-    posts: 1,
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80",
-  }
-
   return (
     <div className="min-h-screen bg-white text-stone-900 flex flex-col justify-between select-none">
-      {/* Top Simple Header */}
+      {/* Top Header */}
       <header className="flex h-16 items-center justify-between px-6 sm:px-12 border-b border-stone-100">
         <Link href="/" className="font-black text-lg tracking-wider uppercase text-stone-950">
           INSTADM
         </Link>
 
-        <div className="flex items-center gap-3 text-xs text-stone-500">
-          <span>Logged in</span>
+        <div className="flex items-center gap-4 text-xs font-semibold">
+          <Link href="/dashboard" className="text-stone-600 hover:text-stone-950 transition">
+            Go to Dashboard
+          </Link>
           <button
             type="button"
             onClick={() => {
               document.cookie = "instadm_ig_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
               router.push("/login")
             }}
-            className="font-semibold text-stone-900 hover:underline"
+            className="text-stone-500 hover:text-stone-900 hover:underline"
           >
             Sign out
           </button>
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* Main Connection Flow */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-xl mx-auto space-y-8 text-center">
-          {/* SCREENSHOT 3: Optional Alternate "Instagram not connected" Banner State */}
-          {status === "prompt" ? (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex justify-center">
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-stone-100 text-stone-700 shadow-xs">
-                  <Camera className="h-10 w-10 text-stone-700" />
-                  <Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-amber-400 fill-amber-400" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight text-stone-950 sm:text-3xl">
-                  Instagram not connected
-                </h1>
-                <p className="text-sm text-stone-500 max-w-md mx-auto leading-relaxed">
-                  Connect your Instagram account to see your posts and set up automations.
-                </p>
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  onClick={() => setStatus("idle")}
-                  className="h-12 rounded-2xl bg-[#6366F1] hover:bg-[#4F46E5] px-8 text-sm font-bold text-white shadow-md gap-2"
-                >
-                  <InstagramIcon className="h-4 w-4 shrink-0" />
-                  <span>Connect Instagram</span>
-                </Button>
+        <div className="w-full max-w-lg mx-auto space-y-8 text-center animate-in fade-in duration-200">
+          {/* Header Titles */}
+          <div className="space-y-3">
+            <div className="flex justify-center mb-2">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white shadow-lg shadow-rose-500/20">
+                <InstagramIcon className="h-8 w-8 text-white" />
               </div>
             </div>
-          ) : (
-            /* SCREENSHOTS 1, 2, 4: Main "Connect your Creator or Business Instagram" Flow */
-            <div className="space-y-8 animate-in fade-in duration-200">
-              {/* Header Titles (Matching Screenshot 1) */}
-              <div className="space-y-3">
-                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-950">
-                  Connect your Creator or <br className="hidden sm:inline" />
-                  Business Instagram
-                </h1>
-                <p className="text-xs sm:text-sm text-stone-500 max-w-lg mx-auto leading-relaxed">
-                  We&apos;ll connect through Meta official login - make sure you are logged in a
-                  Creator or Business account in the browser.{" "}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      alert(
-                        "How to switch to Business or Creator account in Instagram:\n1. Open Instagram Settings\n2. Tap 'Account type and tools'\n3. Tap 'Switch to Professional account'\n4. Select 'Creator' or 'Business'"
-                      )
-                    }
-                    className="font-medium text-stone-800 underline underline-offset-2 hover:text-black cursor-pointer"
-                  >
-                    Need Help?
-                  </button>
-                </p>
+
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-950">
+              Connect your Creator or <br className="hidden sm:inline" />
+              Business Instagram
+            </h1>
+            <p className="text-xs sm:text-sm text-stone-500 max-w-md mx-auto leading-relaxed">
+              Connect your account securely through Meta official OAuth to enable automated DMs,
+              comment replies, and lead capture.
+            </p>
+          </div>
+
+          {/* Official Meta OAuth Connection Card */}
+          <div className="max-w-md mx-auto space-y-4">
+            <a
+              href={oauthUrl || "#"}
+              className="flex h-13 w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-sm font-bold text-white shadow-md hover:opacity-95 transition active:scale-98 cursor-pointer"
+            >
+              <InstagramIcon className="h-5 w-5 shrink-0" />
+              <span>Connect with Meta (Official OAuth)</span>
+            </a>
+
+            {/* Requested Permissions Info */}
+            <div className="rounded-2xl border border-stone-200/80 bg-stone-50/70 p-4 text-left space-y-2 text-[11px] text-stone-600">
+              <div className="flex items-center gap-1.5 font-bold text-stone-800">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Requested Meta Business Permissions:</span>
               </div>
-
-              {/* Direct Meta Official OAuth Button */}
-              <div className="max-w-md mx-auto space-y-3">
-                <a
-                  href={oauthUrl || "#"}
-                  className="flex h-13 w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-sm font-bold text-white shadow-md hover:opacity-95 transition active:scale-98 cursor-pointer"
-                >
-                  <InstagramIcon className="h-5 w-5 shrink-0" />
-                  <span>Connect with Meta (Official OAuth)</span>
-                </a>
-
-                <div className="rounded-2xl border border-stone-200/80 bg-stone-50/70 p-3 text-left space-y-1.5 text-[11px] text-stone-600">
-                  <div className="flex items-center gap-1.5 font-bold text-stone-800">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                    <span>Requested Meta Business Permissions:</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
-                    <span className="rounded-md bg-white px-2 py-0.5 border border-stone-200 font-mono text-[10px] text-stone-700">
-                      instagram_business_basic
-                    </span>
-                    <span className="rounded-md bg-white px-2 py-0.5 border border-stone-200 font-mono text-[10px] text-stone-700">
-                      instagram_business_manage_messages
-                    </span>
-                    <span className="rounded-md bg-white px-2 py-0.5 border border-stone-200 font-mono text-[10px] text-stone-700">
-                      instagram_business_manage_comments
-                    </span>
-                  </div>
-                </div>
-
-                <div className="relative py-2 flex items-center justify-center">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-stone-200" />
-                  </div>
-                  <span className="relative bg-white px-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
-                    Or find account manually
-                  </span>
-                </div>
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                <span className="rounded-md bg-white px-2 py-1 border border-stone-200 font-mono text-[10px] text-stone-700">
+                  instagram_business_basic
+                </span>
+                <span className="rounded-md bg-white px-2 py-1 border border-stone-200 font-mono text-[10px] text-stone-700">
+                  instagram_business_manage_messages
+                </span>
+                <span className="rounded-md bg-white px-2 py-1 border border-stone-200 font-mono text-[10px] text-stone-700">
+                  instagram_business_manage_comments
+                </span>
               </div>
-
-              {/* Form Input Container */}
-              <form onSubmit={handleFindAccount} className="max-w-md mx-auto space-y-4 text-left">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-stone-800">
-                    Your Instagram username
-                  </label>
-
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-stone-400 font-medium text-sm">
-                      @
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={username}
-                      onChange={(e) => {
-                        setUsername(e.target.value)
-                        if (status !== "idle") setStatus("idle")
-                      }}
-                      placeholder="your_username"
-                      className={`h-12 w-full rounded-2xl border bg-white pl-9 pr-4 text-sm font-medium text-stone-900 transition focus:outline-none ${
-                        status === "found"
-                          ? "border-[hsl(340_82%_62%)] ring-2 ring-[hsl(340_82%_62%/0.2)]"
-                          : status === "error"
-                          ? "border-red-400 ring-2 ring-red-100"
-                          : "border-stone-300 focus:border-stone-900 focus:ring-2 focus:ring-stone-900/10"
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                {/* ============================================================== */}
-                {/* STATE 2: Can't find that account (Matching Screenshot 2)      */}
-                {/* ============================================================== */}
-                {status === "error" && (
-                  <div className="rounded-3xl border-2 border-red-500 bg-white p-5 space-y-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex items-center gap-2 text-stone-950 font-bold text-sm">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white text-xs font-black">
-                        ✕
-                      </div>
-                      <span>Can&apos;t find that account</span>
-                    </div>
-
-                    <div className="space-y-1.5 text-xs text-stone-700 pl-7">
-                      <p className="font-bold text-stone-900">Most likely reasons:</p>
-                      <p className="text-stone-600">
-                        <span className="font-bold text-stone-800">1.</span> Typo in username
-                      </p>
-                      <p className="text-stone-600">
-                        <span className="font-bold text-stone-800">2.</span> You have a Personal
-                        account (need Business/Creator)
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 pt-1">
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setUsername("")
-                          setStatus("idle")
-                        }}
-                        className="h-10 rounded-2xl bg-[#EF4444] hover:bg-red-600 text-xs font-bold text-white px-5 shadow-xs"
-                      >
-                        Try again
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          alert(
-                            "To switch to Creator/Business:\nGo to Instagram app > Settings > Account > Switch to Professional Account."
-                          )
-                        }
-                        className="h-10 rounded-2xl border-stone-200 text-xs font-bold text-stone-800 hover:bg-stone-50 px-4"
-                      >
-                        Switch account type
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ============================================================== */}
-                {/* STATE 4: Account found (Matching Screenshot 4)                */}
-                {/* ============================================================== */}
-                {status === "found" && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="rounded-3xl border-2 border-emerald-500 bg-white p-4 sm:p-5 shadow-sm space-y-3">
-                      <div className="flex items-center gap-2 text-stone-950 font-bold text-sm">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-black">
-                          ✓
-                        </div>
-                        <span>Account found</span>
-                      </div>
-
-                      <div className="flex items-center gap-3.5 pl-7">
-                        {/* Profile Thumbnail */}
-                        <div className="h-14 w-14 shrink-0 rounded-2xl overflow-hidden bg-gradient-to-tr from-sky-800 to-indigo-950 flex items-center justify-center text-white font-bold text-lg shadow-2xs">
-                          {activeAccount.username.slice(0, 2).toUpperCase()}
-                        </div>
-
-                        <div className="space-y-0.5">
-                          <p className="text-sm font-bold text-stone-950 flex items-center gap-1.5">
-                            <span>{activeAccount.name}</span>
-                          </p>
-                          <p className="text-xs text-stone-500">@{activeAccount.username}</p>
-                          <p className="text-xs text-stone-500 font-medium">
-                            {activeAccount.followers} followers · {activeAccount.posts} posts
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Primary Action Button: Sign in as @coder_431 */}
-                    <Button
-                      type="button"
-                      disabled={connecting}
-                      onClick={handleConnect}
-                      className="h-13 w-full rounded-2xl bg-[hsl(340_82%_62%)] hover:bg-[hsl(340_82%_55%)] text-sm font-bold text-white shadow-md gap-2 active:scale-98 transition cursor-pointer"
-                    >
-                      <InstagramIcon className="h-5 w-5 shrink-0" />
-                      <span>
-                        {connecting
-                          ? "Connecting to Meta Graph API..."
-                          : `Sign in as @${activeAccount.username}`}
-                      </span>
-                    </Button>
-                  </div>
-                )}
-
-                {/* Find Account Submit Button (When in idle or searching) */}
-                {status !== "found" && (
-                  <Button
-                    type="submit"
-                    disabled={status === "searching" || !username.trim()}
-                    className="h-12 w-full rounded-2xl bg-black hover:bg-stone-900 text-sm font-bold text-white shadow-sm transition active:scale-98 cursor-pointer"
-                  >
-                    {status === "searching" ? (
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        <span>Searching Meta Graph API...</span>
-                      </div>
-                    ) : (
-                      <span>Find account</span>
-                    )}
-                  </Button>
-                )}
-              </form>
             </div>
-          )}
 
-          {/* Helper shortcut / demo chips for all 4 states */}
-          <div className="pt-3 text-center text-xs text-stone-400 space-y-2">
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              <span className="text-[11px] font-bold text-stone-400 mr-1">Preview UI states:</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setUsername("")
-                  setStatus("idle")
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
-                  status === "idle"
-                    ? "bg-stone-900 text-white shadow-xs"
-                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                }`}
-              >
-                1. Search (Screen 1)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUsername("raju")
-                  setStatus("error")
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
-                  status === "error"
-                    ? "bg-red-600 text-white shadow-xs"
-                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                }`}
-              >
-                2. Not Found (Screen 2)
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatus("prompt")}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
-                  status === "prompt"
-                    ? "bg-[#6366F1] text-white shadow-xs"
-                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                }`}
-              >
-                3. Not Connected (Screen 3)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUsername("coder_431")
-                  setStatus("found")
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
-                  status === "found"
-                    ? "bg-[hsl(340_82%_62%)] text-white shadow-xs"
-                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-                }`}
-              >
-                4. Found @coder_431 (Screen 4)
-              </button>
+            {/* Account Requirements Checklist */}
+            <div className="rounded-2xl border border-stone-200/80 bg-white p-4 text-left space-y-2 text-xs text-stone-600 shadow-2xs">
+              <div className="flex items-center gap-1.5 font-bold text-stone-900">
+                <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
+                <span>Before connecting:</span>
+              </div>
+              <ul className="space-y-1.5 pl-5 list-disc text-[11px] text-stone-600">
+                <li>
+                  Your Instagram account must be set to <strong>Professional (Creator or Business)</strong>.
+                </li>
+                <li>
+                  In Instagram mobile app: <strong>Settings &gt; Message controls &gt; Connected tools &gt; Allow access to messages</strong> must be turned ON.
+                </li>
+              </ul>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Footer Meta Disclaimer */}
+      {/* Footer */}
       <footer className="py-6 text-center text-xs text-stone-400 border-t border-stone-100">
         <p>InstaDM connects directly via official Meta Instagram Graph API webhooks.</p>
       </footer>

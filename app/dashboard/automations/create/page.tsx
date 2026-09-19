@@ -41,6 +41,18 @@ function CreateAutomationContent() {
 
   // Live Phone Screen State: "post" | "comments" | "dm"
   const [activeScreen, setActiveScreen] = React.useState<"post" | "comments" | "dm">("post")
+  const [accountUsername, setAccountUsername] = React.useState<string>("creator")
+
+  React.useEffect(() => {
+    fetch("/api/dashboard/stats")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.account?.username) {
+          setAccountUsername(data.account.username)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Step 1 State: When a user comments on
   const [postSelection, setPostSelection] = React.useState<"specific" | "next" | "any">("specific")
@@ -243,7 +255,7 @@ function CreateAutomationContent() {
                     <ChevronLeft className="h-4 w-4 text-stone-400" />
                     <div className="text-center">
                       <p className="text-[11px] font-bold">Posts</p>
-                      <p className="text-[9px] text-stone-400">coder_431</p>
+                      <p className="text-[9px] text-stone-400">{accountUsername}</p>
                     </div>
                     <MoreHorizontal className="h-4 w-4 text-stone-400" />
                   </div>
@@ -268,7 +280,7 @@ function CreateAutomationContent() {
                     </div>
                     <p className="text-[10px] text-stone-400">Be the first to like this</p>
                     <p className="text-[10px] text-stone-200 font-semibold">
-                      coder_431 <span className="font-normal text-stone-400">| Hmm</span>
+                      {accountUsername} <span className="font-normal text-stone-400">| Trigger active</span>
                     </p>
                   </div>
 
@@ -346,9 +358,9 @@ function CreateAutomationContent() {
                     <div className="flex items-center gap-1.5">
                       <ChevronLeft className="h-4 w-4 text-stone-400" />
                       <div className="h-6 w-6 rounded-full bg-stone-700 flex items-center justify-center text-[9px] font-bold">
-                        C
+                        {accountUsername.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-xs font-bold truncate max-w-[100px]">coder_431</span>
+                      <span className="text-xs font-bold truncate max-w-[100px]">{accountUsername}</span>
                     </div>
                     <div className="flex items-center gap-2 text-stone-400">
                       <Phone className="h-3.5 w-3.5" />

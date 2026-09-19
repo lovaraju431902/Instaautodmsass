@@ -53,20 +53,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 4. Protected routes: /dashboard and all /dashboard/:path*
+  // 4. Dashboard routes: allow direct access without redirect loops
   if (pathname.startsWith("/dashboard")) {
-    if (!isAuthenticated) {
-      // Unauthenticated visitor -> redirect to /login
-      const loginUrl = new URL("/login", request.url)
-      loginUrl.searchParams.set("callbackUrl", pathname)
-      return NextResponse.redirect(loginUrl)
-    }
-
-    if (!isIgConnected) {
-      // Logged in, but has not connected their Instagram yet -> redirect to /connect-instagram
-      return NextResponse.redirect(new URL("/connect-instagram", request.url))
-    }
-
     return NextResponse.next()
   }
 
