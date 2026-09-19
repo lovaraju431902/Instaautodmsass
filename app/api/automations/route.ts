@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       name = "Comments → DM",
       triggerType = "COMMENTS",
       postTargetType = "SPECIFIC",
+      specificPostId,
       keywords = ["link"],
       openingDmEnabled = true,
       openingMessage = "Hey! Thanks for your comment! 😊",
@@ -66,7 +67,12 @@ export async function POST(req: NextRequest) {
 
     // 1. Fetch active workspace & Instagram account for this user
     let workspace = await prisma.workspace.findFirst({
-      where: { ownerId: session.user.id },
+      where: {
+        OR: [
+          { ownerId: session.user.id },
+          { members: { some: { userId: session.user.id } } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
     })
 
@@ -100,6 +106,7 @@ export async function POST(req: NextRequest) {
         status: "LIVE",
         triggerType: triggerType.toUpperCase() === "STORIES" ? "STORIES" : "COMMENTS",
         postTargetType: postTargetType === "any" ? "ANY" : "SPECIFIC",
+        specificPostId: specificPostId || null,
         keywordMatchType: "SPECIFIC_KEYWORD",
         openingDmEnabled,
         openingMessage,

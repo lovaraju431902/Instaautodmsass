@@ -34,6 +34,19 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+interface PostItem {
+  id: string
+  mediaId: string
+  mediaType: string
+  caption?: string
+  mediaUrl?: string
+  thumbnailUrl?: string
+  permalink?: string
+  likesCount: number
+  commentsCount: number
+  postedAt: string
+}
+
 function CreateAutomationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -42,6 +55,11 @@ function CreateAutomationContent() {
   // Live Phone Screen State: "post" | "comments" | "dm"
   const [activeScreen, setActiveScreen] = React.useState<"post" | "comments" | "dm">("post")
   const [accountUsername, setAccountUsername] = React.useState<string>("creator")
+  const [posts, setPosts] = React.useState<PostItem[]>([])
+  const [selectedPost, setSelectedPost] = React.useState<PostItem | null>(null)
+  const [isPostsModalOpen, setIsPostsModalOpen] = React.useState(false)
+  const [modalSearch, setModalSearch] = React.useState("")
+  const [modalFilter, setModalFilter] = React.useState<"ALL" | "REEL" | "IMAGE">("ALL")
 
   React.useEffect(() => {
     fetch("/api/dashboard/stats")
@@ -50,13 +68,35 @@ function CreateAutomationContent() {
         if (data?.account?.username) {
           setAccountUsername(data.account.username)
         }
+        if (Array.isArray(data?.posts) && data.posts.length > 0) {
+          setPosts(data.posts)
+          const targetId = searchParams.get("postId")
+          const matched = targetId ? data.posts.find((p: PostItem) => p.id === targetId) : null
+          setSelectedPost(matched || data.posts[0])
+        }
       })
       .catch(() => {})
-  }, [])
+  }, [searchParams])
+
+  const filteredPosts = React.useMemo(() => {
+    return posts.filter((p) => {
+      const matchesFilter =
+        modalFilter === "ALL"
+          ? true
+          : modalFilter === "REEL"
+          ? p.mediaType === "REEL" || p.mediaType === "VIDEO"
+          : p.mediaType !== "REEL" && p.mediaType !== "VIDEO"
+
+      const matchesSearch = modalSearch
+        ? (p.caption || "").toLowerCase().includes(modalSearch.toLowerCase())
+        : true
+
+      return matchesFilter && matchesSearch
+    })
+  }, [posts, modalFilter, modalSearch])
 
   // Step 1 State: When a user comments on
   const [postSelection, setPostSelection] = React.useState<"specific" | "next" | "any">("specific")
-  const [selectedPostId, setSelectedPostId] = React.useState("post-1")
 
   // Step 2 State: And his/her comment has
   const [keywordType, setKeywordType] = React.useState<"specific" | "any">("specific")
@@ -108,6 +148,7 @@ function CreateAutomationContent() {
               : "Any Post Comments → Auto DM",
           triggerType: triggerType === "stories" ? "STORIES" : "COMMENTS",
           postTargetType: postSelection,
+          specificPostId: postSelection === "specific" ? selectedPost?.id : null,
           keywords: keywordType === "any" ? [] : keywords,
           openingDmEnabled,
           openingMessage,
@@ -251,25 +292,42 @@ function CreateAutomationContent() {
               {activeScreen === "post" && (
                 <div className="flex-1 flex flex-col justify-between bg-black text-white animate-in fade-in duration-200">
                   {/* Instagram Post Header */}
-                  <div className="flex items-center justify-between py-2 border-b border-stone-900">
+                  <div className="flex items-center justify-between py-2 border-b border-stone-900 px-1">
                     <ChevronLeft className="h-4 w-4 text-stone-400" />
                     <div className="text-center">
-                      <p className="text-[11px] font-bold">Posts</p>
-                      <p className="text-[9px] text-stone-400">{accountUsername}</p>
+                      <p className="text-[11px] font-bold">
+                        {selectedPost?.mediaType === "REEL" ? "Reels" : "Posts"}
+                      </p>
+                      <p className="text-[9px] text-stone-400">@{accountUsername}</p>
                     </div>
                     <MoreHorizontal className="h-4 w-4 text-stone-400" />
                   </div>
 
-                  {/* Post Image (Sky and Trees) */}
-                  <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-gradient-to-b from-sky-700 via-blue-900 to-emerald-950 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#38bdf8_0,transparent_70%)] opacity-30" />
+                  {/* Post Image/Reel Canvas */}
+                  <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-stone-900 flex items-center justify-center">
+                    {selectedPost?.thumbnailUrl || selectedPost?.mediaUrl ? (
+                      <img
+                        src={selectedPost.thumbnailUrl || selectedPost.mediaUrl}
+                        alt={selectedPost.caption || "Instagram Reel"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="relative aspect-[4/5] w-full bg-gradient-to-b from-sky-700 via-blue-900 to-emerald-950 flex items-center justify-center">
+                        <Play className="h-8 w-8 fill-white/80 text-white/80" />
+                      </div>
+                    )}
+                    {selectedPost?.mediaType === "REEL" && (
+                      <div className="absolute top-2 right-2 rounded-full bg-black/60 backdrop-blur-xs p-1 text-white">
+                        <Play className="h-3 w-3 fill-white" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions & Likes */}
-                  <div className="py-2 space-y-1.5 text-xs">
+                  <div className="py-2 space-y-1 text-xs px-1">
                     <div className="flex items-center justify-between text-stone-200">
                       <div className="flex items-center gap-3">
-                        <Heart className="h-4 w-4" />
+                        <Heart className="h-4 w-4 hover:text-red-500 cursor-pointer" />
                         <MessageCircle
                           className="h-4 w-4 text-[hsl(340_82%_62%)] cursor-pointer"
                           onClick={() => setActiveScreen("comments")}
@@ -278,9 +336,14 @@ function CreateAutomationContent() {
                       </div>
                       <Bookmark className="h-4 w-4" />
                     </div>
-                    <p className="text-[10px] text-stone-400">Be the first to like this</p>
-                    <p className="text-[10px] text-stone-200 font-semibold">
-                      {accountUsername} <span className="font-normal text-stone-400">| Trigger active</span>
+                    <p className="text-[10px] text-stone-400">
+                      {selectedPost?.likesCount ? `${selectedPost.likesCount} likes` : "Be the first to like this"}
+                    </p>
+                    <p className="text-[10px] text-stone-200 font-semibold line-clamp-2">
+                      @{accountUsername}{" "}
+                      <span className="font-normal text-stone-300">
+                        | {selectedPost?.caption || "Trigger active"}
+                      </span>
                     </p>
                   </div>
 
@@ -465,38 +528,87 @@ function CreateAutomationContent() {
 
               {postSelection === "specific" && (
                 <div className="space-y-3 pt-1">
-                  {/* Selectable Post Thumbnail Grid */}
-                  <div className="flex items-center gap-3">
-                    <div
-                      onClick={() => {
-                        setSelectedPostId("post-1")
-                        setActiveScreen("post")
-                      }}
-                      className="relative h-28 w-24 rounded-xl overflow-hidden border-2 border-[hsl(340_82%_62%)] shadow-xs cursor-pointer"
-                    >
-                      <div className="h-full w-full bg-gradient-to-b from-sky-700 via-blue-900 to-emerald-950" />
-                      {/* Check badge */}
-                      <div className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[hsl(340_82%_62%)] text-white">
-                        <Check className="h-2.5 w-2.5 stroke-[3]" />
-                      </div>
-                      <div className="absolute bottom-1 left-1.5 flex items-center gap-2 text-[9px] text-white">
-                        <span className="flex items-center gap-0.5">
-                          <Heart className="h-2.5 w-2.5" /> 0
-                        </span>
-                        <span className="flex items-center gap-0.5">
-                          <MessageCircle className="h-2.5 w-2.5" /> 0
-                        </span>
-                      </div>
+                  {posts.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-stone-200 p-6 text-center">
+                      <p className="text-xs text-stone-500">
+                        No Instagram posts found yet. Connect your account or publish content on Instagram to select it.
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      {/* Selectable Post Thumbnail Grid (First 4 posts) */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {posts.slice(0, 4).map((post) => {
+                          const isSelected = selectedPost?.id === post.id
+                          return (
+                            <div
+                              key={post.id}
+                              onClick={() => {
+                                setSelectedPost(post)
+                                setActiveScreen("post")
+                              }}
+                              className={`relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer transition border-2 group ${
+                                isSelected
+                                  ? "border-[hsl(340_82%_62%)] ring-2 ring-[hsl(340_82%_62%)]/25 shadow-sm"
+                                  : "border-stone-200 hover:border-stone-300"
+                              }`}
+                            >
+                              {post.thumbnailUrl || post.mediaUrl ? (
+                                <img
+                                  src={post.thumbnailUrl || post.mediaUrl}
+                                  alt={post.caption || "Media"}
+                                  className="h-full w-full object-cover group-hover:scale-105 transition duration-300"
+                                />
+                              ) : (
+                                <div className="h-full w-full bg-gradient-to-tr from-sky-800 to-indigo-950 flex items-center justify-center text-white">
+                                  <Play className="h-5 w-5 fill-white" />
+                                </div>
+                              )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-50"
-                  >
-                    Show More
-                  </Button>
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30" />
+
+                              {isSelected && (
+                                <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(340_82%_62%)] text-white shadow-xs">
+                                  <Check className="h-3 w-3 stroke-[3]" />
+                                </div>
+                              )}
+
+                              {post.mediaType === "REEL" && (
+                                <div className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-xs">
+                                  <Play className="h-2.5 w-2.5 fill-white" />
+                                  <span>Reel</span>
+                                </div>
+                              )}
+
+                              <div className="absolute bottom-1.5 left-1.5 right-1.5 text-white">
+                                <p className="text-[10px] font-bold truncate leading-tight">
+                                  {post.caption || "Instagram Reel"}
+                                </p>
+                                <div className="flex items-center gap-2 text-[9px] text-stone-300 mt-0.5">
+                                  <span className="flex items-center gap-0.5">
+                                    <Heart className="h-2.5 w-2.5 fill-white/80" /> {post.likesCount}
+                                  </span>
+                                  <span className="flex items-center gap-0.5">
+                                    <MessageCircle className="h-2.5 w-2.5 fill-white/80" /> {post.commentsCount}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsPostsModalOpen(true)}
+                        className="w-full rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-50 border-stone-200"
+                      >
+                        Show More ({posts.length} Posts &amp; Reels)
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -918,6 +1030,161 @@ function CreateAutomationContent() {
           </div>
         </div>
       </div>
+
+      {/* ========================================================= */}
+      {/* MODAL: ALL POSTS & REELS SELECTION MODAL                  */}
+      {/* ========================================================= */}
+      {isPostsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-3xl bg-white shadow-2xl overflow-hidden border border-stone-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
+              <div>
+                <h3 className="text-base font-bold text-stone-900">Select Post or Reel</h3>
+                <p className="text-xs text-stone-500">
+                  Choose which Instagram content to attach this automation to.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPostsModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Search & Filter Bar */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 border-b border-stone-100 px-6 py-3 bg-stone-50/60">
+              <div className="relative flex-1 w-full">
+                <Input
+                  value={modalSearch}
+                  onChange={(e) => setModalSearch(e.target.value)}
+                  placeholder="Search by caption..."
+                  className="h-8 text-xs rounded-xl bg-white pl-8 border-stone-200"
+                />
+                <Sparkles className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-stone-400" />
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center rounded-xl bg-stone-200/70 p-1 text-[11px] font-semibold text-stone-600 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setModalFilter("ALL")}
+                  className={`px-3 py-1 rounded-lg transition ${
+                    modalFilter === "ALL" ? "bg-white text-stone-900 shadow-2xs" : "hover:text-stone-900"
+                  }`}
+                >
+                  All ({posts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalFilter("REEL")}
+                  className={`px-3 py-1 rounded-lg transition ${
+                    modalFilter === "REEL" ? "bg-white text-stone-900 shadow-2xs" : "hover:text-stone-900"
+                  }`}
+                >
+                  Reels
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalFilter("IMAGE")}
+                  className={`px-3 py-1 rounded-lg transition ${
+                    modalFilter === "IMAGE" ? "bg-white text-stone-900 shadow-2xs" : "hover:text-stone-900"
+                  }`}
+                >
+                  Posts
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Posts Grid (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {filteredPosts.length === 0 ? (
+                <div className="py-12 text-center text-xs text-stone-500">
+                  No posts match your search criteria.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {filteredPosts.map((post) => {
+                    const isSelected = selectedPost?.id === post.id
+                    return (
+                      <div
+                        key={post.id}
+                        onClick={() => {
+                          setSelectedPost(post)
+                          setActiveScreen("post")
+                          setIsPostsModalOpen(false)
+                        }}
+                        className={`group relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer border-2 transition ${
+                          isSelected
+                            ? "border-[hsl(340_82%_62%)] ring-2 ring-[hsl(340_82%_62%)]/30 shadow-md"
+                            : "border-stone-200 hover:border-stone-400 hover:shadow-xs"
+                        }`}
+                      >
+                        {post.thumbnailUrl || post.mediaUrl ? (
+                          <img
+                            src={post.thumbnailUrl || post.mediaUrl}
+                            alt={post.caption || "Media"}
+                            className="h-full w-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-gradient-to-tr from-sky-800 to-indigo-950 flex items-center justify-center text-white">
+                            <Play className="h-6 w-6 fill-white" />
+                          </div>
+                        )}
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30" />
+
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(340_82%_62%)] text-white shadow-sm">
+                            <Check className="h-3.5 w-3.5 stroke-[3]" />
+                          </div>
+                        )}
+
+                        {post.mediaType === "REEL" && (
+                          <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
+                            <Play className="h-2.5 w-2.5 fill-white" />
+                            <span>Reel</span>
+                          </div>
+                        )}
+
+                        <div className="absolute bottom-2 left-2 right-2 text-white">
+                          <p className="text-xs font-bold line-clamp-1 leading-tight">
+                            {post.caption || "Instagram Reel"}
+                          </p>
+                          <div className="flex items-center justify-between text-[10px] text-stone-300 mt-1">
+                            <span className="flex items-center gap-1">
+                              <Heart className="h-3 w-3 fill-white/80" /> {post.likesCount}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle className="h-3 w-3 fill-white/80" /> {post.commentsCount}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-stone-100 bg-stone-50 px-6 py-3 text-xs">
+              <span className="text-stone-500 truncate max-w-sm">
+                Selected: <strong className="text-stone-900">{selectedPost?.caption ? selectedPost.caption.slice(0, 35) + "..." : "Selected Reel"}</strong>
+              </span>
+              <Button
+                type="button"
+                onClick={() => setIsPostsModalOpen(false)}
+                className="rounded-xl bg-stone-900 text-xs font-bold text-white hover:bg-stone-800 h-8 px-4"
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

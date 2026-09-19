@@ -129,8 +129,13 @@ export async function GET(req: Request) {
     const posts = account
       ? await prisma.post.findMany({
           where: { instagramAccountId: account.id },
+          include: {
+            automations: {
+              select: { id: true, name: true, status: true },
+            },
+          },
           orderBy: { postedAt: "desc" },
-          take: 30,
+          take: 50,
         })
       : []
 
@@ -181,7 +186,22 @@ export async function GET(req: Request) {
         destinationUrl: a.destinationUrl,
         useAiAssistant: a.useAiAssistant,
       })),
-      recentPost: posts[0] || null,
+      recentPost: posts[0]
+        ? {
+            id: posts[0].id,
+            mediaId: posts[0].mediaId,
+            mediaType: posts[0].mediaType,
+            caption: posts[0].caption || "Instagram Post",
+            mediaUrl: posts[0].mediaUrl,
+            thumbnailUrl: posts[0].thumbnailUrl,
+            permalink: posts[0].permalink,
+            likesCount: posts[0].likesCount,
+            commentsCount: posts[0].commentsCount,
+            postedAt: posts[0].postedAt,
+            hasAutomation: Boolean(posts[0].automations && posts[0].automations.length > 0),
+            automations: posts[0].automations || [],
+          }
+        : null,
       posts: posts.map((p) => ({
         id: p.id,
         mediaId: p.mediaId,
@@ -193,6 +213,8 @@ export async function GET(req: Request) {
         likesCount: p.likesCount,
         commentsCount: p.commentsCount,
         postedAt: p.postedAt,
+        hasAutomation: Boolean(p.automations && p.automations.length > 0),
+        automations: p.automations || [],
       })),
     })
   } catch (error: any) {

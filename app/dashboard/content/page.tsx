@@ -17,6 +17,7 @@ export default function ContentPage() {
   const [data, setData] = React.useState<{
     account: { username: string; followersCount: number; profilePictureUrl?: string } | null
     recentPost: {
+      id?: string
       caption?: string
       mediaType?: string
       mediaUrl?: string
@@ -24,6 +25,7 @@ export default function ContentPage() {
       likesCount?: number
       commentsCount?: number
       postedAt?: string
+      hasAutomation?: boolean
     } | null
     posts?: Array<{
       id: string
@@ -36,6 +38,7 @@ export default function ContentPage() {
       likesCount: number
       commentsCount: number
       postedAt: string
+      hasAutomation?: boolean
     }>
   } | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -176,19 +179,34 @@ export default function ContentPage() {
               {/* Caption */}
               <div className="pt-2">
                 <p className="text-xs font-semibold text-white line-clamp-2">
-                  {username} <span className="font-normal text-stone-300">| {data?.recentPost?.caption || "Automation active"}</span>
+                  {username} <span className="font-normal text-stone-300">| {data?.recentPost?.caption || "Instagram Reel"}</span>
                 </p>
-                <p className="text-[10px] font-medium text-emerald-400 uppercase mt-1">META GRAPH API LIVE</p>
+                <p className="text-[10px] font-medium uppercase mt-1">
+                  {data?.recentPost?.hasAutomation ? (
+                    <span className="text-emerald-400 font-bold">AUTOMATION LIVE</span>
+                  ) : (
+                    <span className="text-stone-400 font-medium">NO AUTOMATION SET</span>
+                  )}
+                </p>
               </div>
 
               {/* Action Button */}
               <div className="pt-3">
-                <Link
-                  href="/dashboard/automations"
-                  className="flex h-9 w-full items-center justify-center rounded-full bg-white text-xs font-bold text-black hover:bg-stone-100 transition"
-                >
-                  View Automation
-                </Link>
+                {data?.recentPost?.hasAutomation ? (
+                  <Link
+                    href="/dashboard/automations"
+                    className="flex h-9 w-full items-center justify-center rounded-full bg-white text-xs font-bold text-black hover:bg-stone-100 transition"
+                  >
+                    View Automation
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/dashboard/automations/create?type=comments${data?.recentPost?.id ? `&postId=${data.recentPost.id}` : ""}`}
+                    className="flex h-9 w-full items-center justify-center rounded-full bg-[hsl(340_82%_62%)] text-xs font-bold text-white hover:bg-[hsl(340_82%_55%)] shadow-xs transition"
+                  >
+                    + Create Automation
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -232,6 +250,7 @@ export default function ContentPage() {
                       month: "short",
                       day: "numeric",
                     })
+                    const hasAuto = Boolean(post.hasAutomation)
                     return (
                       <tr key={post.id} className="hover:bg-stone-50/40 transition">
                         <td className="py-4 px-5">
@@ -256,9 +275,15 @@ export default function ContentPage() {
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200/60">
-                            Live
-                          </span>
+                          {hasAuto ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200/60">
+                              Live
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-medium text-stone-500 border border-stone-200/60">
+                              No Automation
+                            </span>
+                          )}
                         </td>
                         <td className="py-4 px-4 text-center text-stone-400 font-medium">—</td>
                         <td className="py-4 px-4 text-center font-bold text-stone-900">{post.likesCount}</td>
@@ -266,14 +291,26 @@ export default function ContentPage() {
                         <td className="py-4 px-4 text-center text-stone-400 font-medium">—</td>
                         <td className="py-4 px-4 text-center text-stone-400 font-medium">—</td>
                         <td className="py-4 px-5 text-right">
-                          <Button
+                          {hasAuto ? (
+                            <Button
 
-                            variant="outline"
-                            size="sm"
-                            className="h-7 rounded-lg text-xs font-semibold px-2.5 border-stone-200 text-stone-700 hover:bg-stone-100"
-                          >
-                            <Link href="/dashboard/automations">View Automation</Link>
-                          </Button>
+                              variant="outline"
+                              size="sm"
+                              className="h-7 rounded-lg text-xs font-semibold px-2.5 border-stone-200 text-stone-700 hover:bg-stone-100"
+                            >
+                              <Link href="/dashboard/automations">View Automation</Link>
+                            </Button>
+                          ) : (
+                            <Button
+
+                              size="sm"
+                              className="h-7 rounded-lg text-xs font-bold px-3 bg-[hsl(340_82%_62%)] text-white hover:bg-[hsl(340_82%_55%)] shadow-2xs"
+                            >
+                              <Link href={`/dashboard/automations/create?type=comments&postId=${post.id}`}>
+                                + Set Automation
+                              </Link>
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     )
