@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { MousePointerClick, Percent, Send } from "lucide-react"
+import { useDashboardStats } from "@/hooks/queries/use-dashboard-stats"
 
 interface FloatingStatsWidgetProps {
   dmsSent?: number
@@ -14,36 +15,15 @@ export function FloatingStatsWidget({
   linkClicks: propClicks,
   ctr: propCtr,
 }: FloatingStatsWidgetProps) {
-  const [stats, setStats] = React.useState({
-    dmsSent: propDms ?? 0,
-    linkClicks: propClicks ?? 0,
-    ctr: propCtr ?? "0%",
-  })
+  const { data } = useDashboardStats()
 
-  React.useEffect(() => {
-    const fetchLive = async () => {
-      try {
-        const res = await fetch("/api/dashboard/stats")
-        if (res.ok) {
-          const data = await res.json()
-          const dms = data.stats?.dmsSent ?? 0
-          const clicks = data.stats?.linkClicks ?? 0
-          const calculatedCtr = dms > 0 ? `${Math.round((clicks / dms) * 100)}%` : "0%"
-          setStats({ dmsSent: dms, linkClicks: clicks, ctr: calculatedCtr })
-        }
-      } catch {
-        // keep fallback
-      }
-    }
+  const liveDms = data?.stats?.dmsSent ?? 0
+  const liveClicks = data?.stats?.linkClicks ?? 0
+  const liveCtr = liveDms > 0 ? `${Math.round((liveClicks / liveDms) * 100)}%` : "0%"
 
-    if (propDms === undefined) {
-      fetchLive()
-    }
-  }, [propDms])
-
-  const dms = propDms !== undefined ? propDms : stats.dmsSent
-  const clicks = propClicks !== undefined ? propClicks : stats.linkClicks
-  const ctr = propCtr !== undefined ? propCtr : stats.ctr
+  const dms = propDms !== undefined ? propDms : liveDms
+  const clicks = propClicks !== undefined ? propClicks : liveClicks
+  const ctr = propCtr !== undefined ? propCtr : liveCtr
 
   return (
     <aside

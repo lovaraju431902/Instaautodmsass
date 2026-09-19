@@ -11,6 +11,7 @@ import { Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { authClient } from "@/lib/auth-client"
 
+import { useDashboardStats } from "@/hooks/queries/use-dashboard-stats"
 import { NewAutomationModal } from "@/components/dashboard/new-automation-modal"
 
 export default function DashboardLayout({
@@ -20,62 +21,46 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { data: session, isPending } = authClient.useSession()
+  const { data: session, isPending: isSessionPending } = authClient.useSession()
+  const { data: statsData, isLoading: isStatsLoading } = useDashboardStats()
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [isNewAutomationOpen, setIsNewAutomationOpen] = React.useState(false)
-  const [isVerifyingAccount, setIsVerifyingAccount] = React.useState(true)
-  const [hasInstagramAccount, setHasInstagramAccount] = React.useState(false)
 
   React.useEffect(() => {
-    if (isPending) return
+    if (isSessionPending) return
 
     if (!session?.user) {
       router.replace("/signin")
       return
     }
 
-    let isMounted = true
-
-    // Enforce: login -> add an instagram profile with permissions -> dashboard
-    fetch("/api/dashboard/stats")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!isMounted) return
-        if (!data || !data.account) {
-          document.cookie = "instadm_ig_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-          router.replace("/connect-instagram")
-        } else {
-          document.cookie = "instadm_ig_connected=true; path=/; max-age=2592000; SameSite=Lax"
-          setHasInstagramAccount(true)
-          setIsVerifyingAccount(false)
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          router.replace("/connect-instagram")
-        }
-      })
-
-    return () => {
-      isMounted = false
+    if (!isStatsLoading) {
+      if (!statsData || !statsData.account) {
+        document.cookie = "instadm_ig_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+        router.replace("/connect-instagram")
+      } else {
+        document.cookie = "instadm_ig_connected=true; path=/; max-age=2592000; SameSite=Lax"
+      }
     }
-  }, [session, isPending, router])
+  }, [session, isSessionPending, statsData, isStatsLoading, router])
 
-  if (isPending || isVerifyingAccount) {
+  const isVerifying = isSessionPending || isStatsLoading
+
+  if (isVerifying) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white select-none">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-stone-900 border-t-transparent" />
           <p className="text-xs text-stone-500 font-medium">
-            {isPending ? "Checking authorization..." : "Verifying Instagram connection..."}
+            {isSessionPending ? "Checking authorization..." : "Loading workspace data..."}
           </p>
         </div>
       </div>
     )
   }
 
-  if (!session?.user || !hasInstagramAccount) {
+  if (!session?.user || !statsData?.account) {
     return null
   }
 

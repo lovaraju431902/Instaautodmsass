@@ -12,63 +12,17 @@ import {
   Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useDashboardStats, useRefreshDashboardStats } from "@/hooks/queries/use-dashboard-stats"
 
 export default function ContentPage() {
-  const [data, setData] = React.useState<{
-    account: { username: string; followersCount: number; profilePictureUrl?: string } | null
-    recentPost: {
-      id?: string
-      caption?: string
-      mediaType?: string
-      mediaUrl?: string
-      thumbnailUrl?: string
-      likesCount?: number
-      commentsCount?: number
-      postedAt?: string
-      hasAutomation?: boolean
-    } | null
-    posts?: Array<{
-      id: string
-      mediaId: string
-      mediaType: string
-      caption: string
-      mediaUrl?: string
-      thumbnailUrl?: string
-      permalink?: string
-      likesCount: number
-      commentsCount: number
-      postedAt: string
-      hasAutomation?: boolean
-    }>
-  } | null>(null)
-  const [loading, setLoading] = React.useState(true)
-  const [isRefreshing, setIsRefreshing] = React.useState(false)
-
-  const loadContent = async (refresh = false) => {
-    try {
-      const url = refresh ? "/api/dashboard/stats?refresh=true" : "/api/dashboard/stats"
-      const res = await fetch(url)
-      if (res.ok) {
-        const json = await res.json()
-        setData(json)
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false)
-      setIsRefreshing(false)
-    }
-  }
-
-  React.useEffect(() => {
-    loadContent()
-  }, [])
+  const { data, isLoading: loading } = useDashboardStats()
+  const refreshMutation = useRefreshDashboardStats()
 
   const handleRefresh = () => {
-    setIsRefreshing(true)
-    loadContent(true)
+    refreshMutation.mutate()
   }
 
+  const isRefreshing = refreshMutation.isPending
   const username = data?.account?.username || "creator"
   const hasAccount = Boolean(data?.account)
 

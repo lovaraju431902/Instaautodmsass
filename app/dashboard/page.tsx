@@ -19,98 +19,24 @@ import {
   Users,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-interface DashboardStats {
-  account: {
-    id: string
-    username: string
-    name?: string
-    followersCount: number
-    profilePictureUrl?: string
-  } | null
-  stats: {
-    dmsSent: number
-    linkClicks: number
-    leadsCollected: number
-    totalFollowers: number
-    dmsSentThisMonth?: number
-    monthlyDmLimit?: number
-  }
-  automations: Array<{
-    id: string
-    name: string
-    status: "LIVE" | "PAUSED"
-    triggerType: string
-    dmsSentCount: number
-    clicksCount: number
-    keywords: string[]
-    finalMessage: string
-    destinationUrl?: string
-  }>
-  recentPost: {
-    caption?: string
-    mediaType?: string
-    likesCount?: number
-    commentsCount?: number
-    mediaUrl?: string
-    thumbnailUrl?: string
-  } | null
-}
+import { useDashboardStats, useRefreshDashboardStats } from "@/hooks/queries/use-dashboard-stats"
+import { useToggleAutomation } from "@/hooks/queries/use-automations"
 
 export default function DashboardHomePage() {
-  const [data, setData] = React.useState<DashboardStats | null>(null)
-  const [loading, setLoading] = React.useState(true)
-  const [isRefreshing, setIsRefreshing] = React.useState(false)
-
-  const fetchStats = async (refresh = false) => {
-    try {
-      const url = refresh ? "/api/dashboard/stats?refresh=true" : "/api/dashboard/stats"
-      const res = await fetch(url)
-      if (res.ok) {
-        const json = await res.json()
-        setData(json)
-      }
-    } catch (err) {
-      console.error("Failed to load dashboard stats:", err)
-    } finally {
-      setLoading(false)
-      setIsRefreshing(false)
-    }
-  }
-
-  React.useEffect(() => {
-    fetchStats()
-  }, [])
+  const { data, isLoading } = useDashboardStats()
+  const refreshMutation = useRefreshDashboardStats()
+  const toggleMutation = useToggleAutomation()
 
   const handleRefresh = () => {
-    setIsRefreshing(true)
-    fetchStats(true)
+    refreshMutation.mutate()
   }
 
-  const handleToggleAutomation = async (id: string, currentStatus: "LIVE" | "PAUSED") => {
+  const handleToggleAutomation = (id: string, currentStatus: "LIVE" | "PAUSED") => {
     const nextStatus = currentStatus === "LIVE" ? "PAUSED" : "LIVE"
-    try {
-      const res = await fetch("/api/automations", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status: nextStatus }),
-      })
-      if (res.ok) {
-        setData((prev) => {
-          if (!prev) return prev
-          return {
-            ...prev,
-            automations: prev.automations.map((a) =>
-              a.id === id ? { ...a, status: nextStatus } : a
-            ),
-          }
-        })
-      }
-    } catch (err) {
-      console.error(err)
-    }
+    toggleMutation.mutate({ id, status: nextStatus })
   }
 
+  const isRefreshing = refreshMutation.isPending
   const username = data?.account?.username || "creator"
   const displayName = data?.account?.name || `@${username}`
   const automations = data?.automations || []

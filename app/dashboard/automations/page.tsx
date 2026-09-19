@@ -5,72 +5,22 @@ import Link from "next/link"
 import { MoreVertical, Pause, Play, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NewAutomationModal } from "@/components/dashboard/new-automation-modal"
-
-interface AutomationItem {
-  id: string
-  name: string
-  status: "LIVE" | "PAUSED"
-  triggerType: string
-  dmsSentCount: number
-  clicksCount: number
-  keywords: Array<{ id: string; keyword: string }>
-  finalMessage: string
-  destinationUrl?: string
-}
+import { useAutomations, useToggleAutomation, useDeleteAutomation } from "@/hooks/queries/use-automations"
 
 export default function AutomationsPage() {
-  const [automations, setAutomations] = React.useState<AutomationItem[]>([])
-  const [loading, setLoading] = React.useState(true)
+  const { data: automations = [], isLoading: loading, refetch } = useAutomations()
+  const toggleMutation = useToggleAutomation()
+  const deleteMutation = useDeleteAutomation()
   const [modalOpen, setModalOpen] = React.useState(false)
 
-  const fetchAutomations = async () => {
-    try {
-      const res = await fetch("/api/automations")
-      if (res.ok) {
-        const data = await res.json()
-        setAutomations(data.automations || [])
-      }
-    } catch (err) {
-      console.error("Failed to load automations:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  React.useEffect(() => {
-    fetchAutomations()
-  }, [])
-
-  const handleToggle = async (id: string, currentStatus: "LIVE" | "PAUSED") => {
+  const handleToggle = (id: string, currentStatus: "LIVE" | "PAUSED") => {
     const nextStatus = currentStatus === "LIVE" ? "PAUSED" : "LIVE"
-    try {
-      const res = await fetch("/api/automations", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status: nextStatus }),
-      })
-      if (res.ok) {
-        setAutomations((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status: nextStatus } : a))
-        )
-      }
-    } catch (err) {
-      console.error(err)
-    }
+    toggleMutation.mutate({ id, status: nextStatus })
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm("Are you sure you want to delete this automation?")) return
-    try {
-      const res = await fetch(`/api/automations?id=${id}`, {
-        method: "DELETE",
-      })
-      if (res.ok) {
-        setAutomations((prev) => prev.filter((a) => a.id !== id))
-      }
-    } catch (err) {
-      console.error(err)
-    }
+    deleteMutation.mutate(id)
   }
 
   return (
@@ -110,10 +60,10 @@ export default function AutomationsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={fetchAutomations}
+            onClick={() => refetch()}
             className="text-xs text-stone-500 gap-1"
           >
-            <RefreshCw className="h-3 w-3" />
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
             <span>Reload</span>
           </Button>
         </div>

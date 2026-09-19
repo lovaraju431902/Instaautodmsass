@@ -28,7 +28,12 @@ export async function GET(req: NextRequest) {
 
     // 3. Find or create workspace for this user
     let workspace = await prisma.workspace.findFirst({
-      where: { ownerId: user.id },
+      where: {
+        OR: [
+          { ownerId: user.id },
+          { members: { some: { userId: user.id } } },
+        ],
+      },
       include: {
         instagramAccounts: {
           include: {
@@ -72,12 +77,12 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // 4. Calculate actual total DMs sent and credits
-    const totalAutomations = await prisma.automation.findMany({
+    // 4. Calculate actual total DMs sent and credits efficiently
+    const automationsAggregate = await prisma.automation.aggregate({
       where: { workspaceId: workspace.id },
-      select: { dmsSentCount: true },
+      _sum: { dmsSentCount: true },
     })
-    const realDmsCount = totalAutomations.reduce((acc, a) => acc + (a.dmsSentCount || 0), 0)
+    const realDmsCount = automationsAggregate._sum.dmsSentCount || 0
     const dmsSent = Math.max(workspace.dmsSentThisMonth, realDmsCount)
 
     const monthlyLimit = workspace.monthlyDmLimit || 500

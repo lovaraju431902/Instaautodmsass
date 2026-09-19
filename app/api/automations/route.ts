@@ -15,7 +15,12 @@ export async function GET() {
     }
 
     const workspace = await prisma.workspace.findFirst({
-      where: { ownerId: session.user.id },
+      where: {
+        OR: [
+          { ownerId: session.user.id },
+          { members: { some: { userId: session.user.id } } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
     })
 
@@ -118,18 +123,24 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 3. Create Keywords
+    // 3. Create Keywords in a single atomic batch
     const keywordList = Array.isArray(keywords) ? keywords : ["link"]
-    for (const kw of keywordList) {
-      const trimmed = String(kw).trim().toLowerCase()
-      if (trimmed) {
-        await prisma.automationKeyword.create({
-          data: {
-            automationId: automation.id,
-            keyword: trimmed,
-          },
-        })
-      }
+    const uniqueKeywords = Array.from(
+      new Set(
+        keywordList
+          .map((kw: string) => String(kw).trim().toLowerCase())
+          .filter(Boolean)
+      )
+    )
+
+    if (uniqueKeywords.length > 0) {
+      await prisma.automationKeyword.createMany({
+        data: uniqueKeywords.map((kw) => ({
+          automationId: automation.id,
+          keyword: kw,
+        })),
+        skipDuplicates: true,
+      })
     }
 
     const createdWithKeywords = await prisma.automation.findUnique({

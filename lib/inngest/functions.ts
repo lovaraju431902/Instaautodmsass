@@ -5,9 +5,21 @@ import { generateAiDmReply, classifyCommentIntent } from "@/lib/openai"
 
 /**
  * Background Job: Process Instagram Comment Webhook Event
+ * - Concurrency limited to 3 per account to prevent Meta API rate-limiting
+ * - Validates post target (SPECIFIC vs ANY)
+ * - Anti-spam randomized delay before DM
+ * - Duplicate comment suppression
  */
 export const processInstagramComment = inngest.createFunction(
-  { id: "process-instagram-comment", name: "Process Instagram Comment Event" },
+  {
+    id: "process-instagram-comment",
+    name: "Process Instagram Comment Event",
+    concurrency: {
+      limit: 3,
+      key: "event.data.instagramAccountId",
+    },
+    retries: 2,
+  },
   { event: "instagram/comment.received" },
   async ({ event, step }) => {
     const {
@@ -19,7 +31,7 @@ export const processInstagramComment = inngest.createFunction(
       senderUsername = "user",
     } = event.data
 
-    // 1. Fetch Instagram Account and Active Automations
+    // 1. Fetch Instagram Account and Active Automations with Specific Post relation
     const { account, automations } = await step.run("fetch-automations", async () => {
       const acc = await prisma.instagramAccount.findFirst({
         where: {
@@ -38,6 +50,7 @@ export const processInstagramComment = inngest.createFunction(
         },
         include: {
           keywords: true,
+          specificPost: true,
         },
       })
 
@@ -50,6 +63,34 @@ export const processInstagramComment = inngest.createFunction(
 
     // 2. Evaluate each automation against the incoming comment
     for (const auto of automations) {
+      // Check 1: Post Target Filter (if automation is only for a specific post)
+      if (auto.postTargetType === "SPECIFIC" && auto.specificPost?.mediaId) {
+        if (mediaId && auto.specificPost.mediaId !== mediaId) {
+          continue // Comment is on a different post, skip
+        }
+      }
+
+      // Check 2: Duplicate Suppression (if user already triggered this automation in the last 24h)
+      if (auto.filterDuplicates) {
+        const isDuplicate = await step.run(`check-duplicate-${auto.id}`, async () => {
+          const alreadySent = await prisma.activityLog.findFirst({
+            where: {
+              automationId: auto.id,
+              contact: { instagramUserId: senderId },
+              eventType: "FINAL_DM_SENT",
+              createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+            },
+          })
+          return Boolean(alreadySent)
+        })
+
+        if (isDuplicate) {
+          console.log(`[Inngest] Skipping duplicate DM to @${senderUsername} for automation ${auto.id}`)
+          continue
+        }
+      }
+
+      // Check 3: Keyword / Intent Match
       const keywords = auto.keywords.map((k: { keyword: string }) => k.keyword)
 
       const intentMatch = await step.run(`check-match-${auto.id}`, async () => {
@@ -64,7 +105,13 @@ export const processInstagramComment = inngest.createFunction(
 
       if (!intentMatch.matches) continue
 
-      // 3. Post public comment reply if configured
+      // Check 4: Natural Anti-Spam Delay (simulates human timing so Instagram doesn't flag as bot)
+      if (auto.randomizeDelay) {
+        const delaySec = Math.max(1, Math.min(4, Math.round((auto.delayMinSeconds + auto.delayMaxSeconds) / 2))) || 2
+        await step.sleep(`anti-spam-delay-${auto.id}`, `${delaySec}s`)
+      }
+
+      // Step 5: Post public comment reply if configured
       if (auto.isPublicReplyOn && auto.publicReplyText && commentId) {
         await step.run(`public-reply-${auto.id}`, async () => {
           await replyToInstagramComment({
@@ -75,7 +122,7 @@ export const processInstagramComment = inngest.createFunction(
         })
       }
 
-      // 4. Generate direct message content (via OpenAI assistant or template)
+      // Step 6: Generate direct message content (via OpenAI assistant or template)
       const dmMessage = await step.run(`generate-message-${auto.id}`, async () => {
         if (auto.useAiAssistant) {
           return await generateAiDmReply({
@@ -88,7 +135,7 @@ export const processInstagramComment = inngest.createFunction(
         return auto.finalMessage
       })
 
-      // 5. Send Instagram DM
+      // Step 7: Send Instagram DM via Meta Graph API
       await step.run(`send-dm-${auto.id}`, async () => {
         await sendInstagramDm({
           accessToken: account.accessToken,
@@ -99,7 +146,7 @@ export const processInstagramComment = inngest.createFunction(
         })
       })
 
-      // 6. Persist Lead/Contact and Analytics in Database
+      // Step 8: Persist Lead/Contact and Analytics in Database
       await step.run(`record-analytics-${auto.id}`, async () => {
         // Upsert Contact
         const contact = await prisma.contact.upsert({
@@ -163,7 +210,15 @@ export const processInstagramComment = inngest.createFunction(
  * Background Job: Process Instagram Direct Message Webhook Event
  */
 export const processInstagramDm = inngest.createFunction(
-  { id: "process-instagram-dm", name: "Process Direct Message Event" },
+  {
+    id: "process-instagram-dm",
+    name: "Process Direct Message Event",
+    concurrency: {
+      limit: 3,
+      key: "event.data.instagramAccountId",
+    },
+    retries: 2,
+  },
   { event: "instagram/dm.received" },
   async ({ event, step }) => {
     const { instagramAccountId, senderId, senderUsername = "friend", messageText } = event.data
@@ -173,6 +228,7 @@ export const processInstagramDm = inngest.createFunction(
         where: {
           OR: [{ id: instagramAccountId }, { instagramId: instagramAccountId }],
         },
+        include: { workspace: true },
       })
 
       if (!account) return
@@ -198,6 +254,54 @@ export const processInstagramDm = inngest.createFunction(
           messageText: auto.finalMessage,
           buttonText: auto.buttonText || undefined,
           buttonUrl: auto.destinationUrl || undefined,
+        })
+
+        // Record Contact
+        const contact = await prisma.contact.upsert({
+          where: {
+            instagramAccountId_instagramUserId: {
+              instagramAccountId: account.id,
+              instagramUserId: senderId,
+            },
+          },
+          update: {
+            username: senderUsername,
+            totalDmsReceived: { increment: 1 },
+            lastInteractionAt: new Date(),
+          },
+          create: {
+            workspaceId: account.workspaceId,
+            instagramAccountId: account.id,
+            instagramUserId: senderId,
+            username: senderUsername,
+            totalDmsReceived: 1,
+          },
+        })
+
+        await prisma.automation.update({
+          where: { id: auto.id },
+          data: { dmsSentCount: { increment: 1 } },
+        })
+
+        await prisma.workspace.update({
+          where: { id: account.workspaceId },
+          data: { dmsSentThisMonth: { increment: 1 } },
+        })
+
+        await prisma.activityLog.create({
+          data: {
+            workspaceId: account.workspaceId,
+            automationId: auto.id,
+            contactId: contact.id,
+            eventType: "FINAL_DM_SENT",
+            status: "SUCCESS",
+            messageText: auto.finalMessage,
+            metadata: {
+              trigger: "DM_KEYWORD",
+              senderUsername,
+              messageText,
+            },
+          },
         })
       }
     })

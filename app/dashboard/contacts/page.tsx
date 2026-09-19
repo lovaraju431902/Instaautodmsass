@@ -3,38 +3,10 @@
 import * as React from "react"
 import { Users, Search, Download, Plus, MessageCircle, Clock, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-interface ContactItem {
-  id: string
-  instagramUserId: string
-  username: string | null
-  fullName: string | null
-  status: string
-  totalDmsReceived: number
-  lastInteractionAt: string
-}
+import { useContacts } from "@/hooks/queries/use-contacts"
 
 export default function ContactsPage() {
-  const [contacts, setContacts] = React.useState<ContactItem[]>([])
-  const [loading, setLoading] = React.useState(true)
-
-  const fetchContacts = async () => {
-    try {
-      const res = await fetch("/api/contacts")
-      if (res.ok) {
-        const data = await res.json()
-        setContacts(data.contacts || [])
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  React.useEffect(() => {
-    fetchContacts()
-  }, [])
+  const { data: contacts = [], isLoading: loading, refetch } = useContacts()
 
   return (
     <div className="space-y-6 pb-12 select-none">
@@ -52,10 +24,10 @@ export default function ContactsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchContacts}
+            onClick={() => refetch()}
             className="rounded-full text-xs gap-1"
           >
-            <RefreshCw className="h-3 w-3" />
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
             <span>Refresh</span>
           </Button>
         </div>

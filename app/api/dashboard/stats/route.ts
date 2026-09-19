@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       )
     }
 
-    // 1. Fetch active workspace for this authenticated user
+    // 1. Fetch active workspace and connected Instagram account in a single query
     let workspace = await prisma.workspace.findFirst({
       where: {
         OR: [
@@ -27,26 +27,42 @@ export async function GET(req: Request) {
           { members: { some: { userId: session.user.id } } },
         ],
       },
+      include: {
+        instagramAccounts: {
+          orderBy: { connectedAt: "desc" },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: "desc" },
     })
 
-    // 2. Fetch connected Instagram account
-    let account = await prisma.instagramAccount.findFirst({
-      where: {
-        workspace: {
-          OR: [
-            { ownerId: session.user.id },
-            { members: { some: { userId: session.user.id } } },
-          ],
-        },
-      },
-      orderBy: { connectedAt: "desc" },
-    })
+    let account = workspace?.instagramAccounts?.[0] || null
 
-    if (!workspace && account) {
-      workspace = await prisma.workspace.findUnique({
-        where: { id: account.workspaceId },
+    // Fallback if workspace is missing or not linked
+    if (!workspace) {
+      account = await prisma.instagramAccount.findFirst({
+        where: {
+          workspace: {
+            OR: [
+              { ownerId: session.user.id },
+              { members: { some: { userId: session.user.id } } },
+            ],
+          },
+        },
+        orderBy: { connectedAt: "desc" },
       })
+
+      if (account) {
+        workspace = await prisma.workspace.findUnique({
+          where: { id: account.workspaceId },
+          include: {
+            instagramAccounts: {
+              orderBy: { connectedAt: "desc" },
+              take: 1,
+            },
+          },
+        })
+      }
     }
 
     if (!workspace) {
@@ -64,35 +80,33 @@ export async function GET(req: Request) {
       })
     }
 
-    // 3. Sync media from Meta Graph API if account exists
-    if (account?.accessToken) {
+    // 2. ONLY sync fresh media from Meta Graph API if explicitly requested by user (e.g. ?refresh=true)
+    const currentAccount = account
+    if (forceRefresh && currentAccount?.accessToken) {
       try {
-        const postsCount = await prisma.post.count({
-          where: { instagramAccountId: account.id },
-        })
+        const accountId = currentAccount.id
+        const { fetchInstagramMedia, fetchInstagramProfile } = await import("@/lib/instagram")
+        const [freshMedia, freshProfile] = await Promise.all([
+          fetchInstagramMedia(currentAccount.accessToken).catch(() => []),
+          fetchInstagramProfile(currentAccount.accessToken, currentAccount.instagramId).catch(() => null),
+        ])
 
-        if (postsCount === 0 || forceRefresh) {
-          const { fetchInstagramMedia, fetchInstagramProfile } = await import("@/lib/instagram")
-          const [freshMedia, freshProfile] = await Promise.all([
-            fetchInstagramMedia(account.accessToken).catch(() => []),
-            fetchInstagramProfile(account.accessToken, account.instagramId).catch(() => null),
-          ])
+        if (freshProfile) {
+          account = await prisma.instagramAccount.update({
+            where: { id: accountId },
+            data: {
+              followersCount: freshProfile.followersCount ?? currentAccount.followersCount,
+              name: freshProfile.name || currentAccount.name,
+              profilePictureUrl: freshProfile.profilePictureUrl || currentAccount.profilePictureUrl,
+              username: freshProfile.username || currentAccount.username,
+            },
+          })
+        }
 
-          if (freshProfile) {
-            account = await prisma.instagramAccount.update({
-              where: { id: account.id },
-              data: {
-                followersCount: freshProfile.followersCount ?? account.followersCount,
-                name: freshProfile.name || account.name,
-                profilePictureUrl: freshProfile.profilePictureUrl || account.profilePictureUrl,
-                username: freshProfile.username || account.username,
-              },
-            })
-          }
-
-          if (freshMedia.length > 0) {
-            for (const item of freshMedia) {
-              await prisma.post.upsert({
+        if (freshMedia.length > 0) {
+          await Promise.allSettled(
+            freshMedia.map((item) =>
+              prisma.post.upsert({
                 where: { mediaId: item.id },
                 update: {
                   caption: item.caption,
@@ -105,7 +119,7 @@ export async function GET(req: Request) {
                   postedAt: new Date(item.timestamp),
                 },
                 create: {
-                  instagramAccountId: account.id,
+                  instagramAccountId: accountId,
                   mediaId: item.id,
                   caption: item.caption,
                   mediaType: item.mediaType,
@@ -117,44 +131,43 @@ export async function GET(req: Request) {
                   postedAt: new Date(item.timestamp),
                 },
               })
-            }
-          }
+            )
+          )
         }
       } catch (syncErr) {
-        console.warn("Could not sync real Instagram media:", syncErr)
+        console.warn("Manual refresh Meta sync notice:", syncErr)
       }
     }
 
-    // 4. Fetch all real Posts & Reels
-    const posts = account
-      ? await prisma.post.findMany({
-          where: { instagramAccountId: account.id },
-          include: {
-            automations: {
-              select: { id: true, name: true, status: true },
+    // 3. Database-First: Execute all queries concurrently in parallel
+    const [posts, automations, leadsCollected] = await Promise.all([
+      account
+        ? prisma.post.findMany({
+            where: { instagramAccountId: account.id },
+            include: {
+              automations: {
+                select: { id: true, name: true, status: true },
+              },
             },
-          },
-          orderBy: { postedAt: "desc" },
-          take: 50,
-        })
-      : []
+            orderBy: { postedAt: "desc" },
+            take: 50,
+          })
+        : Promise.resolve([]),
+      prisma.automation.findMany({
+        where: { workspaceId: workspace.id },
+        include: {
+          keywords: true,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.contact.count({
+        where: { workspaceId: workspace.id },
+      }),
+    ])
 
-    // 5. Fetch real Automations
-    const automations = await prisma.automation.findMany({
-      where: { workspaceId: workspace.id },
-      include: {
-        keywords: true,
-      },
-      orderBy: { createdAt: "desc" },
-    })
-
-    // 6. Calculate real metrics
+    // 4. Calculate metrics
     const dmsSent = automations.reduce((sum, a) => sum + (a.dmsSentCount || 0), 0)
     const linkClicks = automations.reduce((sum, a) => sum + (a.clicksCount || 0), 0)
-
-    const leadsCollected = await prisma.contact.count({
-      where: { workspaceId: workspace.id },
-    })
 
     return NextResponse.json({
       account: account

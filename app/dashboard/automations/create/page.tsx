@@ -47,10 +47,13 @@ interface PostItem {
   postedAt: string
 }
 
+import { useDashboardStats } from "@/hooks/queries/use-dashboard-stats"
+
 function CreateAutomationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const triggerType = searchParams.get("type") || "comments"
+  const { data: dashboardData } = useDashboardStats()
 
   // Live Phone Screen State: "post" | "comments" | "dm"
   const [activeScreen, setActiveScreen] = React.useState<"post" | "comments" | "dm">("post")
@@ -62,21 +65,16 @@ function CreateAutomationContent() {
   const [modalFilter, setModalFilter] = React.useState<"ALL" | "REEL" | "IMAGE">("ALL")
 
   React.useEffect(() => {
-    fetch("/api/dashboard/stats")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.account?.username) {
-          setAccountUsername(data.account.username)
-        }
-        if (Array.isArray(data?.posts) && data.posts.length > 0) {
-          setPosts(data.posts)
-          const targetId = searchParams.get("postId")
-          const matched = targetId ? data.posts.find((p: PostItem) => p.id === targetId) : null
-          setSelectedPost(matched || data.posts[0])
-        }
-      })
-      .catch(() => {})
-  }, [searchParams])
+    if (dashboardData?.account?.username) {
+      setAccountUsername(dashboardData.account.username)
+    }
+    if (Array.isArray(dashboardData?.posts) && dashboardData.posts.length > 0) {
+      setPosts(dashboardData.posts)
+      const targetId = searchParams.get("postId")
+      const matched = targetId ? dashboardData.posts.find((p: PostItem) => p.id === targetId) : null
+      setSelectedPost(matched || dashboardData.posts[0])
+    }
+  }, [dashboardData, searchParams])
 
   const filteredPosts = React.useMemo(() => {
     return posts.filter((p) => {

@@ -91,45 +91,49 @@ export async function exchangeCodeForTokens(code: string): Promise<{
 }
 
 /**
- * Fetch Instagram Business/Creator Account Profile Details
+ * Helper to fetch with timeout
+ */
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 4000): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    return res
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
+ * Fetch Instagram Business/Creator Account Profile Details (Fast, Direct)
  */
 export async function fetchInstagramProfile(accessToken: string, userId: string): Promise<InstagramProfile> {
-  const fieldOptions = [
-    "id,username,name,profile_picture_url,followers_count,media_count",
-    "id,username,name,profile_picture_url,media_count",
-    "id,username,profile_picture_url",
-    "id,username",
+  // Direct, prioritized endpoint list (Instagram Graph API & Facebook Graph API)
+  const candidateUrls = [
+    `https://graph.instagram.com/me?fields=id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`,
+    `https://graph.facebook.com/v21.0/${userId}?fields=id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`,
+    `https://graph.instagram.com/me?fields=id,username,name&access_token=${accessToken}`,
+    `https://graph.facebook.com/v21.0/me?fields=id,username,name&access_token=${accessToken}`,
   ]
 
-  const hostOptions = [
-    `${INSTAGRAM_BASE_URL}/v21.0/me`,
-    `${INSTAGRAM_BASE_URL}/v21.0/${userId}`,
-    `https://graph.facebook.com/v21.0/${userId}`,
-    `https://graph.facebook.com/v21.0/me`,
-  ]
-
-  for (const host of hostOptions) {
-    for (const fields of fieldOptions) {
-      try {
-        const url = `${host}?fields=${fields}&access_token=${accessToken}`
-        const res = await fetch(url)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.id || data.username) {
-            return {
-              id: data.id || userId,
-              username: data.username || "creator_account",
-              name: data.name || data.username || "Instagram Creator",
-              profilePictureUrl: data.profile_picture_url,
-              followersCount: Number(data.followers_count ?? data.followersCount ?? 0),
-            }
+  for (const url of candidateUrls) {
+    try {
+      const res = await fetchWithTimeout(url, {}, 3500)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.id || data.username) {
+          return {
+            id: data.id || userId,
+            username: data.username || "creator_account",
+            name: data.name || data.username || "Instagram Creator",
+            profilePictureUrl: data.profile_picture_url || null,
+            followersCount: Number(data.followers_count ?? data.followersCount ?? 0),
           }
-        } else {
-          const errBody = await res.text().catch(() => "")
-          console.warn(`[Instagram Profile] ${host}?fields=${fields} returned ${res.status}:`, errBody)
         }
-      } catch (err) {
-        console.warn(`[Instagram Profile] Fetch failed for ${host}:`, err)
+      }
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        console.warn("[Instagram Profile] Candidate endpoint skipped:", err?.message || err)
       }
     }
   }
@@ -155,48 +159,39 @@ export interface InstagramMediaItem {
 }
 
 /**
- * Fetch Real Instagram Media (Reels & Posts) from Meta Graph API
+ * Fetch Real Instagram Media (Reels & Posts) from Meta Graph API (Fast, Direct)
  */
 export async function fetchInstagramMedia(accessToken: string): Promise<InstagramMediaItem[]> {
-  const fieldSets = [
-    "id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count",
-    "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count",
-    "id,caption,media_type,media_url,permalink,timestamp",
+  const fields = "id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count"
+  const candidateUrls = [
+    `https://graph.instagram.com/me/media?fields=${fields}&limit=30&access_token=${accessToken}`,
+    `https://graph.facebook.com/v21.0/me/media?fields=${fields}&limit=30&access_token=${accessToken}`,
   ]
 
-  const hostUrls = [
-    `${INSTAGRAM_BASE_URL}/v21.0/me/media`,
-    `https://graph.facebook.com/v21.0/me/media`,
-  ]
-
-  for (const host of hostUrls) {
-    for (const fields of fieldSets) {
-      try {
-        const url = `${host}?fields=${fields}&limit=30&access_token=${accessToken}`
-        const res = await fetch(url)
-        if (res.ok) {
-          const json = await res.json()
-          if (Array.isArray(json.data) && json.data.length > 0) {
-            return json.data.map((m: any) => ({
-              id: m.id,
-              caption: m.caption || "No caption",
-              mediaType: m.media_type === "VIDEO" ? "REEL" : (m.media_type || "IMAGE"),
-              mediaUrl: m.media_url || m.thumbnail_url,
-              permalink: m.permalink,
-              thumbnailUrl: m.thumbnail_url || m.media_url,
-              timestamp: m.timestamp || new Date().toISOString(),
-              likesCount: Number(m.like_count || 0),
-              commentsCount: Number(m.comments_count || 0),
-            }))
-          } else if (Array.isArray(json.data) && json.data.length === 0) {
-            return []
-          }
-        } else {
-          const errBody = await res.text().catch(() => "")
-          console.warn(`[Instagram Media] ${host}?fields=${fields} returned ${res.status}:`, errBody)
+  for (const url of candidateUrls) {
+    try {
+      const res = await fetchWithTimeout(url, {}, 4000)
+      if (res.ok) {
+        const json = await res.json()
+        if (Array.isArray(json.data) && json.data.length > 0) {
+          return json.data.map((m: any) => ({
+            id: m.id,
+            caption: m.caption || "No caption",
+            mediaType: m.media_type === "VIDEO" ? "REEL" : (m.media_type || "IMAGE"),
+            mediaUrl: m.media_url || m.thumbnail_url,
+            permalink: m.permalink,
+            thumbnailUrl: m.thumbnail_url || m.media_url,
+            timestamp: m.timestamp || new Date().toISOString(),
+            likesCount: Number(m.like_count || 0),
+            commentsCount: Number(m.comments_count || 0),
+          }))
+        } else if (Array.isArray(json.data) && json.data.length === 0) {
+          return []
         }
-      } catch (e) {
-        console.warn(`[Instagram Media] Failed fetching media from endpoint: ${host}`, e)
+      }
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        console.warn("[Instagram Media] Media endpoint skipped:", e?.message || e)
       }
     }
   }

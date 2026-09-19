@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Tooltip } from "@/components/ui/tooltip"
 import { SidebarMenu } from "./sidebar-menu"
 import { authClient } from "@/lib/auth-client"
+import { useDashboardStats } from "@/hooks/queries/use-dashboard-stats"
 
 interface SidebarProps {
   isOpen: boolean
@@ -32,34 +33,16 @@ export function Sidebar({ isOpen, setIsOpen, onOpenNewAutomation }: SidebarProps
   const router = useRouter()
   const [signingOut, setSigningOut] = React.useState(false)
   const { data: session } = authClient.useSession()
+  const { data: dashboardData } = useDashboardStats()
 
   const userName = session?.user?.name || "Creator"
   const userInitial = userName.charAt(0).toUpperCase() || "C"
 
-  const [stats, setStats] = React.useState<{
-    hasAccount: boolean
-    dmsSent: number
-    monthlyLimit: number
-  }>({
-    hasAccount: false,
-    dmsSent: 0,
-    monthlyLimit: 500,
-  })
-
-  React.useEffect(() => {
-    fetch("/api/dashboard/stats")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d) {
-          setStats({
-            hasAccount: Boolean(d.account),
-            dmsSent: d.stats?.dmsSentThisMonth ?? d.stats?.dmsSent ?? 0,
-            monthlyLimit: d.stats?.monthlyDmLimit ?? 500,
-          })
-        }
-      })
-      .catch(() => {})
-  }, [pathname])
+  const stats = React.useMemo(() => ({
+    hasAccount: Boolean(dashboardData?.account),
+    dmsSent: dashboardData?.stats?.dmsSentThisMonth ?? dashboardData?.stats?.dmsSent ?? 0,
+    monthlyLimit: dashboardData?.stats?.monthlyDmLimit ?? 500,
+  }), [dashboardData])
 
   const handleSignOut = async () => {
     setSigningOut(true)
