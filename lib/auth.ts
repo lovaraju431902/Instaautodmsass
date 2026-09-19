@@ -6,8 +6,11 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  secret: process.env.BETTER_AUTH_SECRET || "instadm-super-secret-auth-key-2026-secure-token",
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  baseURL:
+    process.env.BETTER_AUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.URL ||
+    "http://localhost:3000",
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,

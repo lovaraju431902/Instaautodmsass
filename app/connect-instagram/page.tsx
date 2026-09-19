@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { authClient } from "@/lib/auth-client"
 
 function InstagramIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -116,9 +117,46 @@ function InstagramIcon({ className = "h-4 w-4" }: { className?: string }) {
 
 export default function ConnectInstagramPage() {
   const router = useRouter()
+  const { data: session, isPending } = authClient.useSession()
+  const [isCheckingStatus, setIsCheckingStatus] = React.useState(true)
   const [oauthUrl, setOauthUrl] = React.useState<string>(
     process.env.NEXT_PUBLIC_INSTAGRAM_OAUTH_URL || ""
   )
+
+  React.useEffect(() => {
+    if (isPending) return
+
+    if (!session?.user) {
+      router.replace("/signin")
+      return
+    }
+
+    const isReconnecting =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("reconnect") === "true"
+
+    let isMounted = true
+
+    // If user already connected their Instagram profile and is not reconnecting, route straight to /dashboard
+    fetch("/api/dashboard/stats")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isMounted) return
+        if (data?.account && !isReconnecting) {
+          document.cookie = "instadm_ig_connected=true; path=/; max-age=2592000; SameSite=Lax"
+          router.replace("/dashboard")
+        } else {
+          setIsCheckingStatus(false)
+        }
+      })
+      .catch(() => {
+        if (isMounted) setIsCheckingStatus(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [session, isPending, router])
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -141,6 +179,17 @@ export default function ConnectInstagramPage() {
     }
   }, [])
 
+  if (isPending || isCheckingStatus) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white select-none">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-stone-900 border-t-transparent" />
+          <p className="text-xs text-stone-500 font-medium">Verifying account status...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white text-stone-900 flex flex-col justify-between select-none">
       {/* Top Header */}
@@ -150,14 +199,11 @@ export default function ConnectInstagramPage() {
         </Link>
 
         <div className="flex items-center gap-4 text-xs font-semibold">
-          <Link href="/dashboard" className="text-stone-600 hover:text-stone-950 transition">
-            Go to Dashboard
-          </Link>
           <button
             type="button"
             onClick={() => {
               document.cookie = "instadm_ig_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-              router.push("/login")
+              router.push("/signin")
             }}
             className="text-stone-500 hover:text-stone-900 hover:underline"
           >

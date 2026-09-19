@@ -83,9 +83,10 @@ export default function SignupPage() {
       }
 
       setSuccess(true)
+      document.cookie = "instadm_ig_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
       setTimeout(() => {
         router.push("/connect-instagram")
-      }, 900)
+      }, 700)
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to create account. Please check your connection."

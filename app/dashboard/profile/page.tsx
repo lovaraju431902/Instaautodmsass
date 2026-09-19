@@ -119,9 +119,6 @@ export default function ProfilePage() {
     text: string
   } | null>(null)
 
-  // Instagram Connect Input state
-  const [newUsername, setNewUsername] = React.useState("")
-  const [connectingIg, setConnectingIg] = React.useState(false)
   const [disconnectingId, setDisconnectingId] = React.useState<string | null>(null)
 
   const fetchProfile = React.useCallback(async () => {
@@ -185,37 +182,6 @@ export default function ProfilePage() {
     }
   }
 
-  // Handle Instagram Connect
-  const handleConnectInstagram = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newUsername.trim()) return
-    setConnectingIg(true)
-    setStatusMessage(null)
-
-    try {
-      const res = await fetch("/api/instagram/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: newUsername.trim() }),
-      })
-
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.error || "Failed to connect Instagram account")
-      }
-
-      setNewUsername("")
-      setStatusMessage({
-        type: "success",
-        text: `Instagram account @${newUsername.replace(/^@/, "")} connected successfully!`,
-      })
-      await fetchProfile()
-    } catch (err: any) {
-      setStatusMessage({ type: "error", text: err?.message || "Failed to connect account" })
-    } finally {
-      setConnectingIg(false)
-    }
-  }
 
   // Handle Instagram Disconnect
   const handleDisconnect = async (accountId: string, username: string) => {
@@ -653,28 +619,24 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <form onSubmit={handleConnectInstagram} className="flex flex-col sm:flex-row gap-2.5">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-2.5 text-xs text-stone-400 font-bold">@</span>
-                    <Input
-                      placeholder="your_instagram_handle"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      className="h-9 pl-7 rounded-xl bg-white text-xs"
-                      disabled={connectingIg || (credits?.accountsRemaining === 0)}
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={connectingIg || !newUsername.trim() || (credits?.accountsRemaining === 0)}
-                    className="h-9 rounded-xl bg-stone-900 px-4 text-xs font-semibold text-white hover:bg-stone-800 cursor-pointer"
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/connect-instagram?reconnect=true"
+                    className="flex-1"
                   >
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    <span>{connectingIg ? "Connecting..." : "Connect Profile"}</span>
-                  </Button>
-                </form>
+                    <Button
+                      type="button"
+                      disabled={credits?.accountsRemaining === 0}
+                      className="w-full h-10 rounded-xl bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-xs font-bold text-white shadow-xs hover:opacity-95 cursor-pointer"
+                    >
+                      <InstagramIcon className="mr-2 h-4 w-4" />
+                      <span>Connect with Meta (Official OAuth & Permissions)</span>
+                    </Button>
+                  </Link>
+                </div>
+
                 <p className="text-[10px] text-stone-400">
-                  Must be an Instagram Professional (Creator or Business) account connected to a Facebook Page.
+                  Requests permissions: <span className="font-mono text-stone-600">instagram_business_basic</span>, <span className="font-mono text-stone-600">instagram_business_manage_messages</span>, <span className="font-mono text-stone-600">instagram_business_manage_comments</span>.
                 </p>
               </div>
             </CardContent>

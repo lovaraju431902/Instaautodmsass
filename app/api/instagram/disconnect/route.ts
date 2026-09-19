@@ -23,10 +23,21 @@ export async function POST(req: NextRequest) {
       where: { id: accountId },
     })
 
-    return NextResponse.json({
+    const remainingAccounts = await prisma.instagramAccount.count({
+      where: { workspaceId: account.workspaceId },
+    })
+
+    const response = NextResponse.json({
       success: true,
       message: `Account @${account.username} disconnected successfully`,
     })
+
+    if (remainingAccounts === 0) {
+      response.cookies.delete("instadm_ig_connected")
+      response.cookies.delete("instadm_ig_username")
+    }
+
+    return response
   } catch (error: any) {
     console.error("Failed to disconnect Instagram account:", error)
     return NextResponse.json(

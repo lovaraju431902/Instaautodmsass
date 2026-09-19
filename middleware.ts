@@ -51,13 +51,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 4. Protected routes: /dashboard and all subroutes require authentication
+  // 4. Protected routes: /dashboard and all subroutes require authentication & connected Instagram profile
   if (pathname.startsWith("/dashboard")) {
     if (!isAuthenticated) {
       const signinUrl = new URL("/signin", request.url)
       signinUrl.searchParams.set("callbackUrl", pathname)
       return NextResponse.redirect(signinUrl)
     }
+
+    // Must add an Instagram profile first before accessing dashboard
+    if (!isIgConnected) {
+      return NextResponse.redirect(new URL("/connect-instagram", request.url))
+    }
+
     return NextResponse.next()
   }
 

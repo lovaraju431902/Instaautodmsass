@@ -24,25 +24,58 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [isNewAutomationOpen, setIsNewAutomationOpen] = React.useState(false)
+  const [isVerifyingAccount, setIsVerifyingAccount] = React.useState(true)
+  const [hasInstagramAccount, setHasInstagramAccount] = React.useState(false)
 
   React.useEffect(() => {
-    if (!isPending && !session?.user) {
-      router.replace("/signin?callbackUrl=" + encodeURIComponent(pathname || "/dashboard"))
-    }
-  }, [session, isPending, router, pathname])
+    if (isPending) return
 
-  if (isPending) {
+    if (!session?.user) {
+      router.replace("/signin")
+      return
+    }
+
+    let isMounted = true
+
+    // Enforce: login -> add an instagram profile with permissions -> dashboard
+    fetch("/api/dashboard/stats")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isMounted) return
+        if (!data || !data.account) {
+          document.cookie = "instadm_ig_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+          router.replace("/connect-instagram")
+        } else {
+          document.cookie = "instadm_ig_connected=true; path=/; max-age=2592000; SameSite=Lax"
+          setHasInstagramAccount(true)
+          setIsVerifyingAccount(false)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          router.replace("/connect-instagram")
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [session, isPending, router])
+
+  if (isPending || isVerifyingAccount) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white select-none">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-stone-900 border-t-transparent" />
-          <p className="text-xs text-stone-500 font-medium">Checking authorization...</p>
+          <p className="text-xs text-stone-500 font-medium">
+            {isPending ? "Checking authorization..." : "Verifying Instagram connection..."}
+          </p>
         </div>
       </div>
     )
   }
 
-  if (!session?.user) {
+  if (!session?.user || !hasInstagramAccount) {
     return null
   }
 

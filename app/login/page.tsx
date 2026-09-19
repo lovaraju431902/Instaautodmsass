@@ -56,16 +56,28 @@ export default function LoginPage() {
       }
 
       setSuccess(true)
-      setTimeout(() => {
-        const params = new URLSearchParams(window.location.search)
-        const callbackUrl = params.get("callbackUrl")
-        if (callbackUrl && !callbackUrl.startsWith("/login")) {
-          router.push(callbackUrl)
+      try {
+        const statsRes = await fetch("/api/dashboard/stats")
+        const statsData = statsRes.ok ? await statsRes.json() : null
+        const hasInstagramAccount = Boolean(statsData?.account)
+
+        if (hasInstagramAccount) {
+          document.cookie = "instadm_ig_connected=true; path=/; max-age=2592000; SameSite=Lax"
+          setTimeout(() => {
+            router.push("/dashboard")
+          }, 600)
         } else {
-          const igConnected = document.cookie.includes("instadm_ig_connected=true")
-          router.push(igConnected ? "/dashboard" : "/connect-instagram")
+          document.cookie = "instadm_ig_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+          setTimeout(() => {
+            router.push("/connect-instagram")
+          }, 600)
         }
-      }, 700)
+      } catch {
+        document.cookie = "instadm_ig_connected=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+        setTimeout(() => {
+          router.push("/connect-instagram")
+        }, 600)
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to sign in. Please verify your connection."
       setGlobalError(message)
