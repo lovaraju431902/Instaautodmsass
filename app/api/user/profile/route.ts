@@ -10,31 +10,23 @@ export async function GET(req: NextRequest) {
       headers: await headers(),
     }).catch(() => null)
 
-    // 2. Find active user and workspace
-    let user = session?.user
-      ? await prisma.user.findUnique({
-          where: { id: session.user.id },
-        })
-      : null
-
-    if (!user) {
-      user = await prisma.user.findFirst({
-        orderBy: { createdAt: "desc" },
-      })
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in." },
+        { status: 401 }
+      )
     }
 
-    // If still no user exists, create default user
+    // 2. Find authenticated user
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    })
+
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          name: "Creator Admin",
-          email: "admin@instadm.co",
-          emailVerified: true,
-        },
-      })
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // 3. Find or create workspace
+    // 3. Find or create workspace for this user
     let workspace = await prisma.workspace.findFirst({
       where: { ownerId: user.id },
       include: {
@@ -51,25 +43,6 @@ export async function GET(req: NextRequest) {
         },
       },
     })
-
-    if (!workspace) {
-      workspace = await prisma.workspace.findFirst({
-        orderBy: { createdAt: "desc" },
-        include: {
-          instagramAccounts: {
-            include: {
-              _count: {
-                select: {
-                  posts: true,
-                  automations: true,
-                },
-              },
-            },
-            orderBy: { connectedAt: "desc" },
-          },
-        },
-      })
-    }
 
     if (!workspace) {
       workspace = await prisma.workspace.create({
@@ -178,17 +151,11 @@ export async function PATCH(req: NextRequest) {
       headers: await headers(),
     }).catch(() => null)
 
-    let userId = session?.user?.id
-    if (!userId) {
-      const fallbackUser = await prisma.user.findFirst({
-        orderBy: { createdAt: "desc" },
-      })
-      userId = fallbackUser?.id
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (!userId) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+    const userId = session.user.id
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },

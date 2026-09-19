@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
+import { headers } from "next/headers"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createStripeCheckoutSession } from "@/lib/stripe"
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Find active workspace
+    const authSession = await auth.api.getSession({
+      headers: await headers(),
+    }).catch(() => null)
+
+    if (!authSession?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // 1. Find active workspace for authenticated user
     const workspace = await prisma.workspace.findFirst({
+      where: { ownerId: authSession.user.id },
       orderBy: { createdAt: "desc" },
       include: { owner: true },
     })
@@ -20,7 +31,7 @@ export async function POST(req: NextRequest) {
     // 2. Generate Stripe Checkout URL
     const session = await createStripeCheckoutSession({
       userId: workspace.ownerId,
-      userEmail: workspace.owner?.email || "user@instadm.co",
+      userEmail: authSession.user.email,
       workspaceId: workspace.id,
       priceId,
     })

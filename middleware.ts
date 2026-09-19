@@ -7,9 +7,7 @@ export function middleware(request: NextRequest) {
   // 1. Check Better Auth session token & Instagram connection status
   const sessionToken =
     request.cookies.get("better-auth.session_token")?.value ||
-    request.cookies.get("__Secure-better-auth.session_token")?.value ||
-    request.cookies.get("better_auth_session")?.value ||
-    request.cookies.get("session_token")?.value
+    request.cookies.get("__Secure-better-auth.session_token")?.value
 
   const isAuthenticated = Boolean(sessionToken)
   const isIgConnected = request.cookies.get("instadm_ig_connected")?.value === "true"

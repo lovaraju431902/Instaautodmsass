@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
+import { headers } from "next/headers"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 // GET: Fetch all automations for workspace
 export async function GET() {
   try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    }).catch(() => null)
+
+    if (!session?.user) {
+      return NextResponse.json({ automations: [] })
+    }
+
     const workspace = await prisma.workspace.findFirst({
+      where: { ownerId: session.user.id },
       orderBy: { createdAt: "desc" },
     })
 
@@ -42,27 +53,29 @@ export async function POST(req: NextRequest) {
       aiSystemPrompt = "You are a friendly creator assistant. Keep replies concise and give the link.",
     } = body
 
-    // 1. Fetch active workspace & Instagram account
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    }).catch(() => null)
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in." },
+        { status: 401 }
+      )
+    }
+
+    // 1. Fetch active workspace & Instagram account for this user
     let workspace = await prisma.workspace.findFirst({
+      where: { ownerId: session.user.id },
       orderBy: { createdAt: "desc" },
     })
 
     if (!workspace) {
-      let user = await prisma.user.findFirst()
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            name: "Creator",
-            email: "creator@instadm.co",
-            emailVerified: true,
-          },
-        })
-      }
       workspace = await prisma.workspace.create({
         data: {
           name: "My Workspace",
           slug: `workspace-${Date.now()}`,
-          ownerId: user.id,
+          ownerId: session.user.id,
         },
       })
     }

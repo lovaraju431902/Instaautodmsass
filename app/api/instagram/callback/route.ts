@@ -13,58 +13,31 @@ export async function POST(req: NextRequest) {
 
     const cleanCode = code.trim().replace(/#_$/, "").split("#")[0]
 
-    // 1. Check for authenticated Better Auth user session or retrieve default workspace
+    // 1. Check for authenticated Better Auth user session
     const session = await auth.api.getSession({ headers: req.headers }).catch(() => null)
-    let workspace = null
-
-    if (session?.user?.id) {
-      workspace = await prisma.workspace.findFirst({
-        where: {
-          OR: [
-            { ownerId: session.user.id },
-            { members: { some: { userId: session.user.id } } },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-      })
-
-      if (!workspace) {
-        workspace = await prisma.workspace.create({
-          data: {
-            name: `${session.user.name || "Creator"}'s Workspace`,
-            slug: `workspace-${Date.now()}`,
-            ownerId: session.user.id,
-            monthlyDmLimit: 500,
-            dmsSentThisMonth: 0,
-            maxIgAccounts: 1,
-          },
-        })
-      }
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized. You must be logged in to link an Instagram account." },
+        { status: 401 }
+      )
     }
 
-    if (!workspace) {
-      workspace = await prisma.workspace.findFirst({
-        orderBy: { createdAt: "desc" },
-      })
-    }
+    let workspace = await prisma.workspace.findFirst({
+      where: {
+        OR: [
+          { ownerId: session.user.id },
+          { members: { some: { userId: session.user.id } } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+    })
 
     if (!workspace) {
-      let user = await prisma.user.findFirst()
-      if (!user) {
-        user = await prisma.user.create({
-          data: {
-            name: "Creator Account",
-            email: "user@instadm.co",
-            emailVerified: true,
-          },
-        })
-      }
-
       workspace = await prisma.workspace.create({
         data: {
-          name: "My Workspace",
+          name: `${session.user.name || "Creator"}'s Workspace`,
           slug: `workspace-${Date.now()}`,
-          ownerId: user.id,
+          ownerId: session.user.id,
           monthlyDmLimit: 500,
           dmsSentThisMonth: 0,
           maxIgAccounts: 1,

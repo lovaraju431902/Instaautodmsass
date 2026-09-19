@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { MobileSheetMenu } from "@/components/dashboard/mobile-sheet-menu"
@@ -9,6 +9,7 @@ import { TopBanner } from "@/components/dashboard/top-banner"
 import { FloatingStatsWidget } from "@/components/dashboard/floating-stats-widget"
 import { Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { authClient } from "@/lib/auth-client"
 
 import { NewAutomationModal } from "@/components/dashboard/new-automation-modal"
 
@@ -17,10 +18,33 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const { data: session, isPending } = authClient.useSession()
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [isNewAutomationOpen, setIsNewAutomationOpen] = React.useState(false)
-  const pathname = usePathname()
+
+  React.useEffect(() => {
+    if (!isPending && !session?.user) {
+      router.replace("/signin?callbackUrl=" + encodeURIComponent(pathname || "/dashboard"))
+    }
+  }, [session, isPending, router, pathname])
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white select-none">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-stone-900 border-t-transparent" />
+          <p className="text-xs text-stone-500 font-medium">Checking authorization...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session?.user) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-white text-stone-900 antialiased flex flex-col">
