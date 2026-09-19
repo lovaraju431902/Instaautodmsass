@@ -164,13 +164,13 @@ export default function ConnectInstagramPage() {
         const clientId =
           process.env.NEXT_PUBLIC_INSTAGRAM_APP_ID ||
           process.env.NEXT_PUBLIC_INSTAGRAM_CLIENT_ID ||
-          "1653575196383468"
+          "1717003499383330"
 
         const redirectUri =
           process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI ||
           `${window.location.origin}/callback/instagram`
 
-        const computedUrl = `https://api.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+        const computedUrl = `https://www.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
           redirectUri
         )}&scope=instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments&response_type=code`
 
