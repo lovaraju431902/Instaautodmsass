@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
-import { exchangeCodeForTokens, fetchInstagramProfile, fetchInstagramMedia } from "@/lib/instagram"
+import { exchangeCodeForTokens, fetchInstagramProfile, fetchInstagramMedia, subscribeInstagramAccount } from "@/lib/instagram"
 
 export async function POST(req: NextRequest) {
   try {
@@ -77,6 +77,13 @@ export async function POST(req: NextRequest) {
         status: "CONNECTED",
       },
     })
+
+    // 3b. Subscribe account to Webhooks (comments, messages) on Meta Graph API
+    try {
+      await subscribeInstagramAccount(tokenData.accessToken)
+    } catch (subErr) {
+      console.warn("Non-critical webhook subscription warning:", subErr)
+    }
 
     // 4. Fetch and save real media (posts & reels) concurrently
     try {

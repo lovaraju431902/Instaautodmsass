@@ -50,6 +50,8 @@ export async function POST(req: NextRequest) {
           const senderId = comment.from?.id
           const senderUsername = comment.from?.username || "user"
 
+          console.log(`[Instagram Webhook] Received comment on media ${mediaId} from @${senderUsername}: "${commentText}"`)
+
           // Dispatch event to Inngest for resilient background execution
           await inngest.send({
             name: "instagram/comment.received",

@@ -105,6 +105,33 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 }
 
 /**
+ * Subscribe Instagram Account to Webhooks (Comments & Messages)
+ */
+export async function subscribeInstagramAccount(accessToken: string): Promise<boolean> {
+  if (accessToken.startsWith("ig_mock_") || accessToken.startsWith("meta_token_")) {
+    return true
+  }
+
+  try {
+    const res = await fetch(
+      `https://graph.instagram.com/v21.0/me/subscribed_apps?subscribed_fields=comments,messages&access_token=${accessToken}`,
+      { method: "POST" }
+    )
+    if (!res.ok) {
+      const err = await res.text()
+      console.warn("[Instagram Webhook Subscription] Failed:", err)
+      return false
+    }
+    const data = await res.json()
+    console.log("[Instagram Webhook Subscription] Successful:", data)
+    return Boolean(data.success)
+  } catch (err) {
+    console.error("[Instagram Webhook Subscription] Error:", err)
+    return false
+  }
+}
+
+/**
  * Fetch Instagram Business/Creator Account Profile Details (Fast, Direct)
  */
 export async function fetchInstagramProfile(accessToken: string, userId: string): Promise<InstagramProfile> {
