@@ -137,10 +137,10 @@ export async function subscribeInstagramAccount(accessToken: string): Promise<bo
 export async function fetchInstagramProfile(accessToken: string, userId: string): Promise<InstagramProfile> {
   // Direct, prioritized endpoint list (Instagram Graph API & Facebook Graph API)
   const candidateUrls = [
-    `https://graph.instagram.com/me?fields=id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`,
-    `https://graph.facebook.com/v21.0/${userId}?fields=id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`,
-    `https://graph.instagram.com/me?fields=id,username,name&access_token=${accessToken}`,
-    `https://graph.facebook.com/v21.0/me?fields=id,username,name&access_token=${accessToken}`,
+    `https://graph.instagram.com/me?fields=id,user_id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`,
+    `https://graph.facebook.com/v21.0/${userId}?fields=id,user_id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`,
+    `https://graph.instagram.com/me?fields=id,user_id,username,name&access_token=${accessToken}`,
+    `https://graph.facebook.com/v21.0/me?fields=id,user_id,username,name&access_token=${accessToken}`,
   ]
 
   for (const url of candidateUrls) {
@@ -148,9 +148,9 @@ export async function fetchInstagramProfile(accessToken: string, userId: string)
       const res = await fetchWithTimeout(url, {}, 3500)
       if (res.ok) {
         const data = await res.json()
-        if (data.id || data.username) {
+        if (data.id || data.username || data.user_id) {
           return {
-            id: data.id || userId,
+            id: data.user_id || data.id || userId,
             username: data.username || "creator_account",
             name: data.name || data.username || "Instagram Creator",
             profilePictureUrl: data.profile_picture_url || null,

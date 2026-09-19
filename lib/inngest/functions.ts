@@ -33,12 +33,24 @@ export const processInstagramComment = inngest.createFunction(
 
     // 1. Fetch Instagram Account and Active Automations with Specific Post relation
     const { account, automations } = await step.run("fetch-automations", async () => {
-      const acc = await prisma.instagramAccount.findFirst({
+      let acc = await prisma.instagramAccount.findFirst({
         where: {
-          OR: [{ id: instagramAccountId }, { instagramId: instagramAccountId }],
+          OR: [
+            { id: instagramAccountId },
+            { instagramId: instagramAccountId },
+            { facebookPageId: instagramAccountId },
+          ],
         },
         include: { workspace: true },
       })
+
+      // Resilient fallback: match by connected active account
+      if (!acc) {
+        acc = await prisma.instagramAccount.findFirst({
+          where: { status: "CONNECTED" },
+          include: { workspace: true },
+        })
+      }
 
       if (!acc) return { account: null, automations: [] }
 
@@ -224,12 +236,23 @@ export const processInstagramDm = inngest.createFunction(
     const { instagramAccountId, senderId, senderUsername = "friend", messageText } = event.data
 
     await step.run("handle-dm", async () => {
-      const account = await prisma.instagramAccount.findFirst({
+      let account = await prisma.instagramAccount.findFirst({
         where: {
-          OR: [{ id: instagramAccountId }, { instagramId: instagramAccountId }],
+          OR: [
+            { id: instagramAccountId },
+            { instagramId: instagramAccountId },
+            { facebookPageId: instagramAccountId },
+          ],
         },
         include: { workspace: true },
       })
+
+      if (!account) {
+        account = await prisma.instagramAccount.findFirst({
+          where: { status: "CONNECTED" },
+          include: { workspace: true },
+        })
+      }
 
       if (!account) return
 
