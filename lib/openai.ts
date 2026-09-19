@@ -19,8 +19,10 @@ const ENDPOINT = IS_OPENROUTER
   ? "https://openrouter.ai/api/v1/chat/completions"
   : "https://api.openai.com/v1/chat/completions"
 
-// OpenRouter expects "openai/gpt-4o-mini" or other provider prefixes
-const MODEL = IS_OPENROUTER ? "openai/gpt-4o-mini" : "gpt-4o-mini"
+// OpenRouter Model: Defaults to free model if specified or configured in .env
+const MODEL =
+  process.env.OPENROUTER_MODEL ||
+  (IS_OPENROUTER ? "deepseek/deepseek-v4-flash-0731:free" : "gpt-4o-mini")
 
 function getRequestHeaders() {
   const headers: Record<string, string> = {
