@@ -55,10 +55,7 @@ export function AuthShell({
             </Link>
 
             {/* Subtle brand mark */}
-            <div className="flex items-center gap-1 text-xs font-bold text-stone-400">
-              <Sparkles className="h-3.5 w-3.5 text-[hsl(340_82%_55%)]" />
-              <span>Official Meta Graph API</span>
-            </div>
+
           </div>
 
           {/* Middle: Headline & Value Prop */}
