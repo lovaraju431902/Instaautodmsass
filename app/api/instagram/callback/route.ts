@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { exchangeCodeForTokens, fetchInstagramProfile, fetchInstagramMedia, subscribeInstagramAccount } from "@/lib/instagram"
+import { encryptToken } from "@/lib/crypto"
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,6 +53,9 @@ export async function POST(req: NextRequest) {
       ? new Date(Date.now() + tokenData.expiresIn * 1000)
       : null
 
+    // Encrypt token before saving in database
+    const encryptedAccessToken = encryptToken(tokenData.accessToken)
+
     // 3. Upsert Instagram Account in Prisma DB
     const account = await prisma.instagramAccount.upsert({
       where: { instagramId: profile.id },
@@ -61,7 +65,7 @@ export async function POST(req: NextRequest) {
         name: profile.name,
         profilePictureUrl: profile.profilePictureUrl,
         followersCount: profile.followersCount,
-        accessToken: tokenData.accessToken,
+        accessToken: encryptedAccessToken,
         tokenExpiresAt,
         status: "CONNECTED",
       },
@@ -72,7 +76,7 @@ export async function POST(req: NextRequest) {
         name: profile.name || profile.username,
         profilePictureUrl: profile.profilePictureUrl,
         followersCount: profile.followersCount,
-        accessToken: tokenData.accessToken,
+        accessToken: encryptedAccessToken,
         tokenExpiresAt,
         status: "CONNECTED",
       },

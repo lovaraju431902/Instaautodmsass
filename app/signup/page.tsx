@@ -76,7 +76,7 @@ export default function SignupPage() {
       if (res.error) {
         setGlobalError(
           res.error.message ||
-            "Unable to create account. An account with this email may already exist."
+          "Unable to create account. An account with this email may already exist."
         )
         setLoading(false)
         return
@@ -101,7 +101,7 @@ export default function SignupPage() {
       mode="signup"
       title="Create your account"
       subtitle="Start automating your Instagram DMs and comment replies in minutes."
-      switchText="Already have an account?"
+      switchText="Already haveaa an account?"
       switchLinkText="Sign in"
       switchHref="/login"
     >
@@ -112,7 +112,7 @@ export default function SignupPage() {
           </div>
           <h3 className="text-sm font-bold text-emerald-900">Account Created Successfully!</h3>
           <p className="text-xs text-emerald-700">
-            Welcome to InstaDM, {name}! Your 14-day free trial has been activated. Redirecting...
+            Welcome to InstaDM, {name}! Your 15-day free trial has been activated. Redirecting...
           </p>
         </div>
       ) : (
@@ -140,9 +140,8 @@ export default function SignupPage() {
                   if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: undefined }))
                 }}
                 placeholder="Sarah Jenkins"
-                className={`h-11 pl-10 pr-4 rounded-xl border-stone-200/90 bg-stone-50/50 focus:bg-white focus:border-stone-900 text-xs sm:text-sm transition-all ${
-                  fieldErrors.name ? "border-rose-400 focus:border-rose-500" : ""
-                }`}
+                className={`h-11 pl-10 pr-4 rounded-xl border-stone-200/90 bg-stone-50/50 focus:bg-white focus:border-stone-900 text-xs sm:text-sm transition-all ${fieldErrors.name ? "border-rose-400 focus:border-rose-500" : ""
+                  }`}
               />
             </div>
             {fieldErrors.name && (
@@ -166,9 +165,8 @@ export default function SignupPage() {
                   if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }))
                 }}
                 placeholder="sarah@creatorbrand.com"
-                className={`h-11 pl-10 pr-4 rounded-xl border-stone-200/90 bg-stone-50/50 focus:bg-white focus:border-stone-900 text-xs sm:text-sm transition-all ${
-                  fieldErrors.email ? "border-rose-400 focus:border-rose-500" : ""
-                }`}
+                className={`h-11 pl-10 pr-4 rounded-xl border-stone-200/90 bg-stone-50/50 focus:bg-white focus:border-stone-900 text-xs sm:text-sm transition-all ${fieldErrors.email ? "border-rose-400 focus:border-rose-500" : ""
+                  }`}
               />
             </div>
             {fieldErrors.email && (
@@ -192,9 +190,8 @@ export default function SignupPage() {
                   if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }))
                 }}
                 placeholder="At least 8 characters with 1 number & 1 capital"
-                className={`h-11 pl-10 pr-10 rounded-xl border-stone-200/90 bg-stone-50/50 focus:bg-white focus:border-stone-900 text-xs sm:text-sm transition-all ${
-                  fieldErrors.password ? "border-rose-400 focus:border-rose-500" : ""
-                }`}
+                className={`h-11 pl-10 pr-10 rounded-xl border-stone-200/90 bg-stone-50/50 focus:bg-white focus:border-stone-900 text-xs sm:text-sm transition-all ${fieldErrors.password ? "border-rose-400 focus:border-rose-500" : ""
+                  }`}
               />
               <button
                 type="button"
@@ -218,15 +215,14 @@ export default function SignupPage() {
                   {[1, 2, 3, 4].map((step) => (
                     <div
                       key={step}
-                      className={`h-1 flex-1 rounded-full transition-colors ${
-                        step <= strength
-                          ? strength <= 1
-                            ? "bg-rose-500"
-                            : strength <= 2
+                      className={`h-1 flex-1 rounded-full transition-colors ${step <= strength
+                        ? strength <= 1
+                          ? "bg-rose-500"
+                          : strength <= 2
                             ? "bg-amber-500"
                             : "bg-emerald-500"
-                          : "bg-stone-200"
-                      }`}
+                        : "bg-stone-200"
+                        }`}
                     />
                   ))}
                 </div>
@@ -236,10 +232,10 @@ export default function SignupPage() {
                     {strength <= 1
                       ? "Weak"
                       : strength <= 2
-                      ? "Fair"
-                      : strength === 3
-                      ? "Good"
-                      : "Strong"}
+                        ? "Fair"
+                        : strength === 3
+                          ? "Good"
+                          : "Strong"}
                   </span>
                 </div>
               </div>

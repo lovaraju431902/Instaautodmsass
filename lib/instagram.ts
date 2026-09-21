@@ -1,3 +1,5 @@
+import { decryptToken } from "@/lib/crypto"
+
 const INSTAGRAM_BASE_URL = process.env.INSTAGRAM_BASE_URL || "https://graph.instagram.com"
 const INSTAGRAM_CLIENT_ID = process.env.INSTAGRAM_APP_ID || process.env.INSTAGRAM_CLIENT_ID || ""
 const INSTAGRAM_CLIENT_SECRET = process.env.INSTAGRAM_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET || ""
@@ -107,7 +109,8 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 /**
  * Subscribe Instagram Account to Webhooks (Comments & Messages)
  */
-export async function subscribeInstagramAccount(accessToken: string): Promise<boolean> {
+export async function subscribeInstagramAccount(rawAccessToken: string): Promise<boolean> {
+  const accessToken = decryptToken(rawAccessToken)
   if (accessToken.startsWith("ig_mock_") || accessToken.startsWith("meta_token_")) {
     return true
   }
@@ -134,7 +137,8 @@ export async function subscribeInstagramAccount(accessToken: string): Promise<bo
 /**
  * Fetch Instagram Business/Creator Account Profile Details (Fast, Direct)
  */
-export async function fetchInstagramProfile(accessToken: string, userId: string): Promise<InstagramProfile> {
+export async function fetchInstagramProfile(rawAccessToken: string, userId: string): Promise<InstagramProfile> {
+  const accessToken = decryptToken(rawAccessToken)
   // Direct, prioritized endpoint list (Instagram Graph API & Facebook Graph API)
   const candidateUrls = [
     `https://graph.instagram.com/me?fields=id,user_id,username,name,profile_picture_url,followers_count&access_token=${accessToken}`,
@@ -188,7 +192,8 @@ export interface InstagramMediaItem {
 /**
  * Fetch Real Instagram Media (Reels & Posts) from Meta Graph API (Fast, Direct)
  */
-export async function fetchInstagramMedia(accessToken: string): Promise<InstagramMediaItem[]> {
+export async function fetchInstagramMedia(rawAccessToken: string): Promise<InstagramMediaItem[]> {
+  const accessToken = decryptToken(rawAccessToken)
   const fields = "id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count"
   const candidateUrls = [
     `https://graph.instagram.com/me/media?fields=${fields}&limit=30&access_token=${accessToken}`,
@@ -230,7 +235,7 @@ export async function fetchInstagramMedia(accessToken: string): Promise<Instagra
  * Send an Automated Direct Message (DM) via Meta Instagram Graph API
  */
 export async function sendInstagramDm({
-  accessToken,
+  accessToken: rawAccessToken,
   recipientId,
   commentId,
   messageText,
@@ -244,6 +249,8 @@ export async function sendInstagramDm({
   buttonText?: string
   buttonUrl?: string
 }) {
+  const accessToken = decryptToken(rawAccessToken)
+
   if (accessToken.startsWith("ig_mock_")) {
     console.log(`[Mock Meta API] DM successfully sent to ${recipientId}: "${messageText}"`)
     return { success: true, messageId: `mid_mock_${Date.now()}` }
@@ -274,33 +281,48 @@ export async function sendInstagramDm({
   // Meta Instagram Graph API requires recipient.comment_id when replying to a comment
   const recipient = commentId ? { comment_id: commentId } : { id: recipientId }
 
-  const res = await fetch(`${INSTAGRAM_BASE_URL}/v21.0/me/messages`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({
-      recipient,
-      message: messagePayload,
-    }),
-  })
+  const candidateEndpoints = [
+    `${INSTAGRAM_BASE_URL}/v21.0/me/messages`,
+    `https://graph.facebook.com/v21.0/me/messages`,
+  ]
 
-  if (!res.ok) {
-    const errorText = await res.text()
-    console.error("Meta Graph API DM send error:", errorText)
-    throw new Error(`Meta Graph API DM send error: ${errorText}`)
+  let lastErrorText = ""
+
+  for (const endpoint of candidateEndpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient,
+          message: messagePayload,
+        }),
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        return { success: true, messageId: result.message_id }
+      }
+
+      lastErrorText = await res.text()
+      console.warn(`Meta Graph API DM send error at ${endpoint}:`, lastErrorText)
+    } catch (err: any) {
+      lastErrorText = err?.message || String(err)
+      console.warn(`Meta Graph API DM fetch exception at ${endpoint}:`, lastErrorText)
+    }
   }
 
-  const result = await res.json()
-  return { success: true, messageId: result.message_id }
+  throw new Error(`Meta Graph API DM send failed across endpoints: ${lastErrorText}`)
 }
 
 /**
  * Post Public Reply to an Instagram Comment
  */
 export async function replyToInstagramComment({
-  accessToken,
+  accessToken: rawAccessToken,
   commentId,
   replyText,
 }: {
@@ -308,25 +330,37 @@ export async function replyToInstagramComment({
   commentId: string
   replyText: string
 }) {
+  const accessToken = decryptToken(rawAccessToken)
+
   if (accessToken.startsWith("ig_mock_")) {
     console.log(`[Mock Meta API] Replied to comment ${commentId}: "${replyText}"`)
     return { success: true, id: `reply_mock_${Date.now()}` }
   }
 
-  const res = await fetch(`${INSTAGRAM_BASE_URL}/v21.0/${commentId}/replies`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ message: replyText }),
-  })
+  const candidateEndpoints = [
+    `${INSTAGRAM_BASE_URL}/v21.0/${commentId}/replies`,
+    `https://graph.facebook.com/v21.0/${commentId}/replies`,
+  ]
 
-  if (!res.ok) {
-    const err = await res.text()
-    console.error("Meta Graph API comment reply error:", err)
-    return { success: false, error: err }
+  for (const endpoint of candidateEndpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ message: replyText }),
+      })
+
+      if (res.ok) {
+        return { success: true, data: await res.json() }
+      }
+    } catch (err) {
+      console.warn(`Comment reply candidate ${endpoint} skipped:`, err)
+    }
   }
 
-  return { success: true, data: await res.json() }
+  return { success: false, error: "Failed to reply to comment on Meta Graph API" }
 }
+
