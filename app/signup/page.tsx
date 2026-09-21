@@ -110,7 +110,7 @@ export default function SignupPage() {
           <div className="flex justify-center">
             <CheckCircle2 className="h-8 w-8 text-emerald-600" />
           </div>
-          <h3 className="text-sm font-bold text-emerald-900">Account Created Successfully!</h3>
+          <h3 className="text-sm font-bold text-emerald-900">Account Created Successed !</h3>
           <p className="text-xs text-emerald-700">
             Welcome to InstaDM, {name}! Your 15-day free trial has been activated. Redirecting...
           </p>
