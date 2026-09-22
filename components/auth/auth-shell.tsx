@@ -220,10 +220,10 @@ export function AuthShell({
               Privacy Policy
             </Link>
             <span>•</span>
-            <span className="flex items-center gap-1 text-stone-500">
+            {/* <span className="flex items-center gap-1 text-stone-500">
               <CheckCircle2 className="h-3 w-3 text-emerald-500" />
               256-Bit SSL
-            </span>
+            </span> */}
           </div>
         </div>
       </div>
