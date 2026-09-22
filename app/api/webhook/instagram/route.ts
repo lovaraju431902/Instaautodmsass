@@ -92,8 +92,9 @@ export async function POST(req: NextRequest) {
       const changes = entry.changes || []
       const messaging = entry.messaging || []
 
-      // 1. Handle Comment changes
+      // 1. Handle entry.changes (both "comments" and "messages")
       for (const change of changes) {
+        // Handle Comments
         if (change.field === "comments") {
           const comment = change.value
           const commentId = comment.id
@@ -116,21 +117,57 @@ export async function POST(req: NextRequest) {
               senderUsername,
             },
           })
-          console.log(`[Instagram Webhook] Successfully dispatched to Inngest:`, inngestResult)
+          console.log(`[Instagram Webhook] Successfully dispatched comment to Inngest:`, inngestResult)
+        }
+
+        // Handle Direct Messages sent via entry.changes (Meta Instagram Webhooks v26+)
+        if (change.field === "messages") {
+          const val = change.value || {}
+
+          // Ignore echo messages (sent by the bot/page itself)
+          if (val.message?.is_echo || val.message?.echo) {
+            console.log(`[Instagram Webhook] Ignored echo message`)
+            continue
+          }
+
+          const senderId = val.sender?.id || val.from?.id
+          const messageText = val.message?.text || val.text
+          const targetAccountId = (instagramAccountId && instagramAccountId !== "0")
+            ? instagramAccountId
+            : (val.recipient?.id || instagramAccountId || "0")
+
+          if (messageText && senderId) {
+            console.log(`[Instagram Webhook] Received DM (via changes) from ${senderId}: "${messageText}"`)
+            const inngestResult = await inngest.send({
+              name: "instagram/dm.received",
+              data: {
+                instagramAccountId: targetAccountId,
+                senderId,
+                messageText,
+              },
+            })
+            console.log(`[Instagram Webhook] Successfully dispatched DM to Inngest:`, inngestResult)
+          }
         }
       }
 
-      // 2. Handle Direct Messaging changes
+      // 2. Handle Direct Messaging changes sent via entry.messaging (Messenger / Page format)
       for (const msg of messaging) {
-        if (msg.message?.text) {
-          await inngest.send({
+        if (msg.message?.is_echo) {
+          console.log(`[Instagram Webhook] Ignored echo messaging`)
+          continue
+        }
+
+        if (msg.message?.text && msg.sender?.id) {
+          const inngestResult = await inngest.send({
             name: "instagram/dm.received",
             data: {
               instagramAccountId,
-              senderId: msg.sender?.id,
+              senderId: msg.sender.id,
               messageText: msg.message.text,
             },
           })
+          console.log(`[Instagram Webhook] Successfully dispatched DM (via messaging) to Inngest:`, inngestResult)
         }
       }
     }
