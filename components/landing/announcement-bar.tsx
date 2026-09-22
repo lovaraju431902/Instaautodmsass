@@ -22,7 +22,7 @@ export function AnnouncementBar() {
           href="#features"
           className="group inline-flex items-center gap-1 transition-colors hover:text-foreground"
         >
-          <span>New: Build smarter Instagram DM workflows</span>
+          <span>New: Build smarter Instagram  Auto DM workflows</span>
           <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5 text-[hsl(340_82%_55%)]" />
         </a>
       </div>
