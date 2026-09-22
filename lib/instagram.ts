@@ -258,8 +258,16 @@ export async function sendInstagramDm({
 
   let messagePayload: any = { text: messageText }
 
-  // If a CTA button is configured, format as generic template or button template
-  if (buttonText && buttonUrl) {
+  // Meta Private Replies via comment_id STRICTLY require plain text.
+  // Meta API rejects template buttons with error: "Param recipient[comment_id] only supports text messages".
+  if (commentId) {
+    const fullText =
+      buttonUrl && !messageText.includes(buttonUrl)
+        ? `${messageText}\n\n👉 ${buttonText ? buttonText + ": " : ""}${buttonUrl}`
+        : messageText
+    messagePayload = { text: fullText }
+  } else if (buttonText && buttonUrl) {
+    // For standard DMs, interactive button templates are supported
     messagePayload = {
       attachment: {
         type: "template",
