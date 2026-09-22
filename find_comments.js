@@ -22,7 +22,6 @@ function decryptToken(cipherText) {
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()])
     return decrypted.toString("utf8")
   } catch (err) {
-    console.error("Decrypt error:", err.message)
     return cipherText
   }
 }
@@ -33,46 +32,16 @@ async function main() {
       where: { username: "coder_431" },
     })
 
-    if (!acc) {
-      console.log("coder_431 not found in DB")
-      return
-    }
-
+    if (!acc) return
     const token = decryptToken(acc.accessToken)
 
-    console.log("Account:", {
-      username: acc.username,
-      instagramId: acc.instagramId,
-      hasToken: Boolean(acc.accessToken),
-      decryptedTokenSnippet: token ? token.substring(0, 20) + "..." : "none",
-    })
-
-    // 1. Verify token is valid with /me
-    console.log("\n1. Testing /me endpoint:")
-    const meRes = await fetch(
-      `https://graph.instagram.com/v21.0/me?fields=id,username,user_id&access_token=${token}`
-    )
-    console.log("Me Status:", meRes.status)
-    const meData = await meRes.json()
-    console.log("Me Data:", JSON.stringify(meData, null, 2))
-
-    // 2. Check subscribed_apps
-    console.log("\n2. Checking subscribed_apps:")
-    const subRes = await fetch(
-      `https://graph.instagram.com/v21.0/me/subscribed_apps?access_token=${token}`
-    )
-    console.log("Subscribed Apps Status:", subRes.status)
-    const subData = await subRes.json()
-    console.log("Subscribed Apps:", JSON.stringify(subData, null, 2))
-
-    // 3. Query comments on reel 18198190582379738
-    console.log("\n3. Querying comments on Reel 18198190582379738:")
-    const commentsRes = await fetch(
+    console.log("Querying comments on Reel 18198190582379738...")
+    const res = await fetch(
       `https://graph.instagram.com/v21.0/18198190582379738/comments?fields=id,text,timestamp,username,from&access_token=${token}`
     )
-    console.log("Comments Status:", commentsRes.status)
-    const commentsData = await commentsRes.json()
-    console.log("Comments:", JSON.stringify(commentsData, null, 2))
+    const data = await res.json()
+    console.log("Status:", res.status)
+    console.log("Data:", JSON.stringify(data, null, 2))
   } catch (err) {
     console.error("Error:", err)
   } finally {
